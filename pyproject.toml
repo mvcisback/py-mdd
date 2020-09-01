@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "mdd"
+version = "0.1.0"
+description = "Python abstraction around Binary Decision Diagrams to implement Multivalued Decision Diagrams."
+authors = ["Marcell Vazquez-Chanlatte <mvc@linux.com>"]
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = "^3.7"
+dd = "^0.5.5"
+
+[tool.poetry.dev-dependencies]
+pytest = "^6.0.1"
+pytest-flake8 = "^1.0.6"
+hypothesis = "^5.30.0"
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"
