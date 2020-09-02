@@ -8,7 +8,7 @@ license = "MIT"
 [tool.poetry.dependencies]
 python = "^3.7"
 dd = "^0.5.5"
-py-aiger-bv = "^4.2.1"
+py-aiger-bv = "^4.3.0"
 py-aiger-bdd = "^3.0.0"
 py-aiger = "^6.1.1"
 funcy = "^1.14"

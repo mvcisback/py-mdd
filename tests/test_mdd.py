@@ -27,5 +27,17 @@ def test_to_var():
 
 
 def test_interface():
-    var = mdd.to_var(vals=["x", "y", "z"], name="myvar")
+    var1 = mdd.to_var(vals=["x", "y", "z"], name="myvar1")
+    var2 = var1.with_name("myvar2")
+    var3 = var1.with_name("myvar3")
+
+    interface = mdd.Interface(inputs=[var1, var2, var3], output=var1)
+
+    # Check that interface can 
+    valid = interface.valid()
+    assert valid({'myvar1': 0b100, 'myvar2': 0b100, 'myvar3': 0b100})[0]
+    assert not valid({'myvar1': 0b000, 'myvar2': 0b100, 'myvar3': 0b100})[0]
+
+    func = interface.constantly("x")
+    
     
