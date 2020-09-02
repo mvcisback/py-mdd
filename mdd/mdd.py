@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import math
-from collections import defaultdict
+import re
 from functools import reduce
 from typing import Any, Callable, Dict, Generic, Hashable
 from typing import Iterable, Sequence, Tuple, Union
@@ -14,6 +14,8 @@ import attr
 
 Assignment = Tuple[Dict[str, Any], Any]
 BDD = Any
+
+INDEX_SPLITTER = re.compile(r"(.*)\[(.*)\]")
 
 
 @attr.s(frozen=True, auto_attribs=True)
@@ -48,9 +50,12 @@ class Variable:
         valid_circ = self.valid.aigbv['i', {self.name: name}]
         return attr.evolve(self, valid=BV.UnsignedBVExpr(valid_circ))
 
+    @property
+    def _encoding_size(self) -> int:
+        return self.bundle.size
+
     def expr(self) -> BV.UnsignedBVExpr:
-        size = self.bundle.size  # Need encoding size.
-        return BV.uatom(size, self.name)
+        return BV.uatom(self._encoding_size, self.name)
 
 
 VariableLike = Union[Sequence[Hashable], Variable]
@@ -105,25 +110,13 @@ class Interface:
         valid_tests = (var.valid for var in self.inputs)
         return reduce(lambda x, y: x & y, valid_tests)
 
-    def __call__(self, inputs):
-        # TODO:
-        # 1. Encode input values.
-        # 2. Turn
-        inputs = {
-            var.name: var.encode(inputs[var.name]) for var in self.inputs
-        }
-        
-        vals = defaultdict(lambda: False)
-        for var in self.inputs:
-            pass
-
     def constantly(self, output: Any, manager=None) -> MDD:
         encoded = self.output.encode(output)
         assert self.output.valid({self.output.name: encoded})[0]
 
         # Create BDD that only depends on hot variable in encoded.
         index = pow2_exponent(encoded)
-        expr = self.output.expr()[index]
+        expr = self.output.expr()[index] & self.valid()
         return DecisionDiagram(interface=self, bdd=to_bdd(expr))
 
     def lift(self, vals: ValueLike, manager=None) -> BDD:
@@ -145,6 +138,32 @@ class Interface:
 class DecisionDiagram:
     interface: Interface
     bdd: BDD
+
+    def __call__(self, inputs):
+        input_vars = self.interface.inputs
+        encoded_inputs = {
+            var.name: var.encode(inputs[var.name]) for var in input_vars
+        }
+        assert self.interface.valid()(encoded_inputs)[0]
+
+        vals = {}
+        for var in self.interface.inputs:
+            encoded = encoded_inputs[var.name]
+
+            # Turn bitvector into individual assignments.
+            bundle = var.bundle
+            encoded = BV.encode_int(bundle.size, encoded, signed=False)
+            vals.update(bundle.blast(encoded))
+        bdd = self.bdd.let(**vals)
+        assert bdd.dag_size == 2, "Result should be single variable BDD."
+
+        # Return which decision this was.
+        name, idx = INDEX_SPLITTER.match(bdd.var).groups()
+        idx = int(idx)
+        output_var = self.interface.output
+        assert name == output_var.name
+        assert 0 <= idx < output_var.size
+        return output_var.decode(1 << idx)
 
     def override(self, test: ValueLike, pos: DD) -> DD:
         # TODO: override current DD value.

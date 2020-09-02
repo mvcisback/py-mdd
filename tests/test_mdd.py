@@ -30,14 +30,17 @@ def test_interface():
     var1 = mdd.to_var(vals=["x", "y", "z"], name="myvar1")
     var2 = var1.with_name("myvar2")
     var3 = var1.with_name("myvar3")
+    var4 = var1.with_name("myvar4")
 
-    interface = mdd.Interface(inputs=[var1, var2, var3], output=var1)
+    interface = mdd.Interface(inputs=[var1, var2, var3], output=var4)
 
-    # Check that interface can 
+    # Check that interface can test domain.
     valid = interface.valid()
     assert valid({'myvar1': 0b100, 'myvar2': 0b100, 'myvar3': 0b100})[0]
     assert not valid({'myvar1': 0b000, 'myvar2': 0b100, 'myvar3': 0b100})[0]
 
-    func = interface.constantly("x")
+    func = interface.constantly("y")
+    result = func({'myvar1': 'x', 'myvar2': 'x', 'myvar3': 'x'})
+    breakpoint()
     
     
