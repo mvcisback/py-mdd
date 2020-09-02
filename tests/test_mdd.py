@@ -1,10 +1,13 @@
+import aiger_bdd
+import aiger_bv as BV
+
 import mdd
 
 
 def test_to_var():
-    var = mdd.to_var(vals=["x", "y", "z"], name="myvar")
+    var = mdd.to_var(domain=["x", "y", "z"], name="myvar")
     assert var.name == "myvar"
-    assert var.size == 3
+    assert var.size() == 3
 
     assert var.encode("x") == 0b001
     assert var.encode("y") == 0b010
@@ -27,12 +30,12 @@ def test_to_var():
 
 
 def test_interface():
-    var1 = mdd.to_var(vals=["x", "y", "z"], name="myvar1")
+    var1 = mdd.to_var(domain=["x", "y", "z"], name="myvar1")
     var2 = var1.with_name("myvar2")
     var3 = var1.with_name("myvar3")
     var4 = var1.with_name("myvar4")
 
-    interface = mdd.Interface(inputs=[var1, var2, var3], output=var4)
+    interface = mdd.Interface(inputs=[var1, var2, var3], output={'x', 'y', 'w'})
 
     # Check that interface can test domain.
     valid = interface.valid()
@@ -41,5 +44,36 @@ def test_interface():
 
     func = interface.constantly("y")
     result = func({'myvar1': 'x', 'myvar2': 'x', 'myvar3': 'x'})
+    assert result == "y"
+
+
+def test_lift():
+    interface = mdd.Interface(
+        inputs={
+            "x": [1, 2, 3],
+            "y": [6, 4, 5], 
+            "z": [7, 9, 8],
+        }, 
+        output=[-1, 0, 1]
+    )
+    
+    x, y, z = [var.expr() for var in interface.inputs]
+    out = interface.output.expr()
+
+    # If all all the inputs have the same encoding,
+    # then output -1, otherwise output 1.
+
+    all_equal = (x == y) & (y == z)
+
+    # Due to one hot output encoding, we have:
+    #                          -1       1
+    expr = BV.ite(all_equal, out[0], out[1])
+    func = interface.lift(expr)
+
+    assert func({'x': 1, 'y': 6, 'z': 7}) == -1
+    assert func({'x': 2, 'y': 6, 'z': 7}) == 0
+
+
+    
     
     

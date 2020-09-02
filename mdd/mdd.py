@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import math
 import re
+import uuid
 from functools import reduce
 from typing import Any, Callable, Dict, Generic, Hashable
-from typing import Iterable, Sequence, Tuple, Union
+from typing import Iterable, Optional, Sequence, Tuple, Union
 
 import aiger
 import aiger_bv as BV
@@ -21,10 +22,13 @@ INDEX_SPLITTER = re.compile(r"(.*)\[(.*)\]")
 @attr.s(frozen=True, auto_attribs=True)
 class Variable:
     """BDD representation of a multi-valued variable."""
-    size: int
     valid: BV.UnsignedBVExpr = attr.ib()
     encode: Callable[[Hashable], int]
     decode: Callable[[int], Hashable]
+
+    def size(self) -> int:
+        """Returns number of values Variable can take on."""
+        return aiger_bdd.count(self.valid)
 
     @valid.validator
     def check_bitvector_input(self, _, value):
@@ -75,29 +79,45 @@ def to_bdd(circ_or_expr) -> BDD:
     return aiger_bdd.to_bdd(circ_or_expr, renamer=lambda _, x: x)[0]
 
 
-def to_var(vals: Iterable[Hashable], name: str) -> Variable:
-    """Create BDD representation of a variable taking on values in `vals`."""
-    vals = tuple(vals)
-    tmp = BV.atom(len(vals), name, signed=True)
+Domain = Union[Iterable[Any], Variable]
+
+
+def to_var(domain: Domain, name: Optional[str]=None) -> Variable:
+    """Create BDD representation of a variable taking on values in `domain`."""
+    if name is None:
+        name = str(uuid.uuid1())  # Create unique name.
+
+    if isinstance(domain, Variable):
+        return domain.with_name(name)  # Just rename.
+
+    domain = tuple(domain)
+    tmp = BV.atom(len(domain), name, signed=True)
 
     # Create circuit representing classic onehot bit trick.
     one_hot = (tmp != 0) & ((tmp & (tmp - 1)) == 0)
     one_hot = BV.UnsignedBVExpr(one_hot.aigbv)  # Forget about sign.
 
     return Variable(
-        size=len(vals),
         valid=one_hot.with_output("valid"),
-        encode=lambda val: 1 << vals.index(val),
-        decode=lambda val: vals[pow2_exponent(val)],
+        encode=lambda val: 1 << domain.index(val),
+        decode=lambda val: domain[pow2_exponent(val)],
     )
+
+
+Variables = Sequence[Variable]
+
+
+def to_vars(vals: Union[Iterable[Variable], Dict[str, Domain]]) -> Variables:
+    if isinstance(vals, dict):
+        vals = (to_var(name=key, domain=value) for key, value in vals.items())
+    return tuple(vals)
 
 
 @attr.s(frozen=True, auto_attribs=True)
 class Interface:
     """Input output interface of Multi-valued Decision Diagram."""
-    # TODO: add tuple converter.
-    inputs: Sequence[Variable] = attr.ib()
-    output: Variable  # Assumed to be 1-hot.
+    inputs: Variables = attr.ib(converter=to_vars)
+    output: Variable = attr.ib(converter=to_var)
 
     @inputs.validator
     def check_unique(self, _, value):
@@ -110,7 +130,7 @@ class Interface:
         valid_tests = (var.valid for var in self.inputs)
         return reduce(lambda x, y: x & y, valid_tests)
 
-    def constantly(self, output: Any, manager=None) -> MDD:
+    def constantly(self, output: Any, manager=None) -> DD:
         encoded = self.output.encode(output)
         assert self.output.valid({self.output.name: encoded})[0]
 
@@ -119,12 +139,14 @@ class Interface:
         expr = self.output.expr()[index] & self.valid()
         return DecisionDiagram(interface=self, bdd=to_bdd(expr))
 
-    def lift(self, vals: ValueLike, manager=None) -> BDD:
+    def lift(self, bdd_or_aig, manager=None) -> DD:
+        if hasattr(bdd_or_aig, "aig"):
+            bdd = to_bdd(bdd_or_aig)
         # Assuming BDD object.
         # TODO: check that it's interface is compatible and extend if
         # necessary. 
         # TODO: Make sure no reordering!
-        return DecisionDiagram(interface=self, bdd=vals)
+        return DecisionDiagram(interface=self, bdd=bdd)
         
     def order(self, inputs: Sequence[Union[Variable, str]]):
         """Reorder underlying BDD to respect order seen in inputs.
@@ -162,11 +184,10 @@ class DecisionDiagram:
         idx = int(idx)
         output_var = self.interface.output
         assert name == output_var.name
-        assert 0 <= idx < output_var.size
+        assert 0 <= idx < output_var._encoding_size
         return output_var.decode(1 << idx)
 
     def override(self, test: ValueLike, pos: DD) -> DD:
-        # TODO: override current DD value.
         if isinstance(vals, tuple):  # Assuming partial assignment
             inputs, output = vals
 
@@ -190,4 +211,4 @@ DD = DecisionDiagram
 ValueLike = Union[Assignment, BDD]
 
 
-__all__ = ["DecisionDiagram", "Interface", "Variable", "BDD", "to_var"]
+__all__ = ["DecisionDiagram", "Interface", "Variable", "BDD", "to_var", "to_bdd"]
