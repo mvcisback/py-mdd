@@ -65,10 +65,24 @@ class Interface:
     output: Variable
 
     def lift(self, val: ValueLike) -> MDD:
+        if isinstance(val, dict):
+            # TODO: create constant bdd
+            # Fall through to BDD object extension.
+            pass
+        # Assuming BDD object.
+        # TODO: check that it's interface is compatible and extend if
+        # necessary. 
+        # TODO: Make sure no reordering!
+        return MDD(interface=self, bdd=val)
         
+    def ite(self, test: ValueLike, pos: MDD, neg: MDD) -> MDD:
         pass
 
-    def ite(self, test: ValueLike, pos: MDD, neg: MDD) -> MDD:
+    def order(self, inputs: Sequence[Union[Variable, str]]):
+        """Reorder underlying BDD to respect order seen in inputs.
+        
+        As a side effect, this function turns off reordering.
+        """
         pass
 
 
@@ -78,7 +92,7 @@ class MDD:
     bdd: BDD
 
 
-ValueLike = Union[Assignment, BDD, MDD]
+ValueLike = Union[Assignment, BDD]
 
 
 __all__ = ["MDD", "Interface", "Variable", "BDD", "to_var"]
