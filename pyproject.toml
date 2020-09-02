@@ -11,6 +11,7 @@ dd = "^0.5.5"
 py-aiger-bv = "^4.2.1"
 py-aiger-bdd = "^3.0.0"
 py-aiger = "^6.1.1"
+funcy = "^1.14"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.0.1"

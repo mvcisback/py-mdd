@@ -17,11 +17,31 @@ BDD = Any
 @attr.s(frozen=True, auto_attribs=True)
 class Variable:
     """BDD representation of a multi-valued variable."""
-    name: Hashable
     size: int
     valid: aiger_bv.SignedBVExpr
     encode: Callable[[Hashable], int]
     decode: Callable[[int], Hashable]
+
+
+    @property
+    def _name_bundle(self):
+        imap = self.valid.aigbv.imap
+        (name, bundle), *_ = imap.items()
+        assert not _, "Variables must be over single bitvector."
+        return name, bundle
+
+    @property
+    def name(self):
+        return self._name_bundle[0]
+
+    @property
+    def bundle(self):
+        return self._name_bundle[1]
+
+    def with_name(self, name) -> Variable:
+        """Create a copy of this Variable with a new name."""
+        valid_circ = self.valid.aigbv['i', {self.name: name}]
+        return attr.evolve(self, valid=aiger_bv.SignedBVExpr(valid_circ))
 
 
 VariableLike = Union[Sequence[Hashable], Variable]
@@ -50,7 +70,6 @@ def to_var(vals: Iterable[Hashable], name: str) -> Variable:
     one_hot = (tmp != 0) & ((tmp & (tmp - 1)) == 0)
 
     return Variable(
-        name=name,
         size=len(vals),
         valid=one_hot.with_output("valid"),
         encode=lambda val: 1 << vals.index(val),
@@ -69,6 +88,7 @@ class Interface:
             # TODO: create constant bdd
             # Fall through to BDD object extension.
             pass
+
         # Assuming BDD object.
         # TODO: check that it's interface is compatible and extend if
         # necessary. 

@@ -21,3 +21,11 @@ def test_to_var():
     assert var.valid(valid_input)[0]
     assert not var.valid(invalid_input)[0]
 
+    var2 = var.with_name("bar")
+    assert var.name == "myvar"
+    assert var2.name == "bar"
+
+
+def test_interface():
+    var = mdd.to_var(vals=["x", "y", "z"], name="myvar")
+    
