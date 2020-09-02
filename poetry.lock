@@ -19,17 +19,37 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 version = "1.4.0"
 
 [[package]]
-category = "dev"
+category = "main"
 description = "Classes Without Boilerplate"
 name = "attrs"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
-version = "20.1.0"
+version = "19.3.0"
 
 [package.extras]
-dev = ["coverage (>=5.0.2)", "hypothesis", "pympler", "pytest (>=4.3.0)", "six", "zope.interface", "sphinx", "sphinx-rtd-theme", "pre-commit"]
-docs = ["sphinx", "sphinx-rtd-theme", "zope.interface"]
-tests = ["coverage (>=5.0.2)", "hypothesis", "pympler", "pytest (>=4.3.0)", "six", "zope.interface"]
+azure-pipelines = ["coverage", "hypothesis", "pympler", "pytest (>=4.3.0)", "six", "zope.interface", "pytest-azurepipelines"]
+dev = ["coverage", "hypothesis", "pympler", "pytest (>=4.3.0)", "six", "zope.interface", "sphinx", "pre-commit"]
+docs = ["sphinx", "zope.interface"]
+tests = ["coverage", "hypothesis", "pympler", "pytest (>=4.3.0)", "six", "zope.interface"]
+
+[[package]]
+category = "main"
+description = "Efficient, Pythonic bidirectional map implementation and related functionality"
+name = "bidict"
+optional = false
+python-versions = "*"
+version = "0.18.3"
+
+[package.extras]
+coverage = ["coverage (<5)", "pytest-cov (<3)"]
+dev = ["setuptools-scm (<4)", "Sphinx (<3)", "docutils (0.15.2)", "hypothesis (<5)", "py (<2)", "pytest (<6)", "pytest-benchmark (>=3.2.0,<4)", "sortedcollections (<2)", "sortedcontainers (<3)", "coverage (<5)", "pytest-cov (<3)", "flake8 (<3.8)", "pydocstyle (<3.1)", "pylint (2.2.3)", "astroid (2.1.0)", "pre-commit (<2)", "tox (<4)"]
+docs = ["Sphinx (<3)", "docutils (0.15.2)"]
+flake8 = ["flake8 (<3.8)"]
+lint = ["flake8 (<3.8)", "pydocstyle (<3.1)", "pylint (2.2.3)", "astroid (2.1.0)"]
+pydocstyle = ["pydocstyle (<3.1)"]
+pylint = ["pylint (2.2.3)", "astroid (2.1.0)"]
+sphinx = ["Sphinx (<3)", "docutils (0.15.2)"]
+test = ["hypothesis (<5)", "py (<2)", "pytest (<6)", "pytest-benchmark (>=3.2.0,<4)", "sortedcollections (<2)", "sortedcontainers (<3)", "Sphinx (<3)", "docutils (0.15.2)"]
 
 [[package]]
 category = "dev"
@@ -80,6 +100,14 @@ pyflakes = ">=2.2.0,<2.3.0"
 [package.dependencies.importlib-metadata]
 python = "<3.8"
 version = "*"
+
+[[package]]
+category = "main"
+description = "A fancy and practical functional tools"
+name = "funcy"
+optional = false
+python-versions = "*"
+version = "1.14"
 
 [[package]]
 category = "dev"
@@ -183,6 +211,17 @@ pyparsing = ">=2.0.2"
 six = "*"
 
 [[package]]
+category = "main"
+description = "(Soon to be) the fastest pure-Python PEG parser I could muster"
+name = "parsimonious"
+optional = false
+python-versions = "*"
+version = "0.8.1"
+
+[package.dependencies]
+six = ">=1.9.0"
+
+[[package]]
 category = "dev"
 description = "plugin and hook calling mechanisms for python"
 name = "pluggy"
@@ -226,6 +265,51 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 version = "1.9.0"
 
 [[package]]
+category = "main"
+description = "A python library for manipulating sequential and-inverter gates."
+name = "py-aiger"
+optional = false
+python-versions = ">=3.7,<4.0"
+version = "6.1.1"
+
+[package.dependencies]
+attrs = ">=19.3,<20.0"
+bidict = ">=0.18.0,<0.19.0"
+funcy = ">=1.12,<2.0"
+parsimonious = ">=0.8.1,<0.9.0"
+pyrsistent = ">=0.15.4,<0.16.0"
+toposort = ">=1.5,<2.0"
+
+[[package]]
+category = "main"
+description = "Aiger to BDD bridge."
+name = "py-aiger-bdd"
+optional = false
+python-versions = ">=3.7,<4.0"
+version = "3.0.0"
+
+[package.dependencies]
+attrs = ">=19.3,<20.0"
+bidict = ">=0.18.0,<0.19.0"
+dd = ">=0.5.4,<0.6.0"
+funcy = ">=1.12,<2.0"
+py-aiger = ">=6.0.0,<7.0.0"
+
+[[package]]
+category = "main"
+description = "A python library for manipulating sequential and-inverter gates."
+name = "py-aiger-bv"
+optional = false
+python-versions = ">=3.7,<4.0"
+version = "4.2.1"
+
+[package.dependencies]
+attrs = ">=19.1,<20.0"
+funcy = ">=1.12,<2.0"
+py-aiger = ">=6.1.1,<7.0.0"
+pyrsistent = ">=0.15.4,<0.16.0"
+
+[[package]]
 category = "dev"
 description = "Python style guide checker"
 name = "pycodestyle"
@@ -259,6 +343,17 @@ name = "pyparsing"
 optional = false
 python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*"
 version = "2.4.7"
+
+[[package]]
+category = "main"
+description = "Persistent/Functional/Immutable data structures"
+name = "pyrsistent"
+optional = false
+python-versions = "*"
+version = "0.15.7"
+
+[package.dependencies]
+six = "*"
 
 [[package]]
 category = "dev"
@@ -300,7 +395,7 @@ flake8 = ">=3.5"
 pytest = ">=3.5"
 
 [[package]]
-category = "dev"
+category = "main"
 description = "Python 2 and 3 compatibility utilities"
 name = "six"
 optional = false
@@ -324,6 +419,14 @@ python-versions = "*"
 version = "0.10.1"
 
 [[package]]
+category = "main"
+description = "Implements a topological sort algorithm."
+name = "toposort"
+optional = false
+python-versions = "*"
+version = "1.5"
+
+[[package]]
 category = "dev"
 description = "Backport of pathlib-compatible object wrapper for zip files"
 marker = "python_version < \"3.8\""
@@ -337,7 +440,7 @@ docs = ["sphinx", "jaraco.packaging (>=3.2)", "rst.linker (>=1.9)"]
 testing = ["jaraco.itertools", "func-timeout"]
 
 [metadata]
-content-hash = "a960f110fe715d9a2b34140e65e586d78a8f5b0b2340b0f6e37ba629045a3885"
+content-hash = "cd04dc5d62315486cca0ce872a4a0636f2cac5acbc0fa97f222704ca99278350"
 python-versions = "^3.7"
 
 [metadata.files]
@@ -349,8 +452,12 @@ atomicwrites = [
     {file = "atomicwrites-1.4.0.tar.gz", hash = "sha256:ae70396ad1a434f9c7046fd2dd196fc04b12f9e91ffb859164193be8b6168a7a"},
 ]
 attrs = [
-    {file = "attrs-20.1.0-py2.py3-none-any.whl", hash = "sha256:2867b7b9f8326499ab5b0e2d12801fa5c98842d2cbd22b35112ae04bf85b4dff"},
-    {file = "attrs-20.1.0.tar.gz", hash = "sha256:0ef97238856430dcf9228e07f316aefc17e8939fc8507e18c6501b761ef1a42a"},
+    {file = "attrs-19.3.0-py2.py3-none-any.whl", hash = "sha256:08a96c641c3a74e44eb59afb61a24f2cb9f4d7188748e76ba4bb5edfa3cb7d1c"},
+    {file = "attrs-19.3.0.tar.gz", hash = "sha256:f7b7ce16570fe9965acd6d30101a28f62fb4a7f9e926b3bbc9b61f8b04247e72"},
+]
+bidict = [
+    {file = "bidict-0.18.3-py2.py3-none-any.whl", hash = "sha256:621db384daef94b7031897ca479f4feed025989a64e91c6fae88fb88a842488c"},
+    {file = "bidict-0.18.3.tar.gz", hash = "sha256:1742a25a9ef1b1ac4000683406879a3e1a6577faa02f31e482e6c84e2e3bf628"},
 ]
 colorama = [
     {file = "colorama-0.4.3-py2.py3-none-any.whl", hash = "sha256:7d73d2a99753107a36ac6b455ee49046802e59d9d076ef8e47b61499fa29afff"},
@@ -366,6 +473,9 @@ decorator = [
 flake8 = [
     {file = "flake8-3.8.3-py2.py3-none-any.whl", hash = "sha256:15e351d19611c887e482fb960eae4d44845013cc142d42896e9862f775d8cf5c"},
     {file = "flake8-3.8.3.tar.gz", hash = "sha256:f04b9fcbac03b0a3e58c0ab3a0ecc462e023a9faf046d57794184028123aa208"},
+]
+funcy = [
+    {file = "funcy-1.14.tar.gz", hash = "sha256:75ee84c3b446f92e68a857c2267b15a1b49c631c9d5a87a5f063cd2d6761a5c4"},
 ]
 hypothesis = [
     {file = "hypothesis-5.30.0-py3-none-any.whl", hash = "sha256:4a57b7add9203c6244912ce6d67a2dc040fabb600d90268a022b2c7ca3bce046"},
@@ -395,6 +505,9 @@ packaging = [
     {file = "packaging-20.4-py2.py3-none-any.whl", hash = "sha256:998416ba6962ae7fbd6596850b80e17859a5753ba17c32284f67bfff33784181"},
     {file = "packaging-20.4.tar.gz", hash = "sha256:4357f74f47b9c12db93624a82154e9b120fa8293699949152b22065d556079f8"},
 ]
+parsimonious = [
+    {file = "parsimonious-0.8.1.tar.gz", hash = "sha256:3add338892d580e0cb3b1a39e4a1b427ff9f687858fdd61097053742391a9f6b"},
+]
 pluggy = [
     {file = "pluggy-0.13.1-py2.py3-none-any.whl", hash = "sha256:966c145cd83c96502c3c3868f50408687b38434af77734af1e9ca461a4081d2d"},
     {file = "pluggy-0.13.1.tar.gz", hash = "sha256:15b2acde666561e1298d71b523007ed7364de07029219b604cf808bfa1c765b0"},
@@ -419,6 +532,18 @@ py = [
     {file = "py-1.9.0-py2.py3-none-any.whl", hash = "sha256:366389d1db726cd2fcfc79732e75410e5fe4d31db13692115529d34069a043c2"},
     {file = "py-1.9.0.tar.gz", hash = "sha256:9ca6883ce56b4e8da7e79ac18787889fa5206c79dcc67fb065376cd2fe03f342"},
 ]
+py-aiger = [
+    {file = "py-aiger-6.1.1.tar.gz", hash = "sha256:31dab44dbf5fa9e6233ef871526f341d8084c9ab3160a3544a08a193d957d187"},
+    {file = "py_aiger-6.1.1-py3-none-any.whl", hash = "sha256:73eb28d26255554bd74c752aff985b354a11b873bb2fbd4de9e1b9c333d7bace"},
+]
+py-aiger-bdd = [
+    {file = "py-aiger-bdd-3.0.0.tar.gz", hash = "sha256:f91ac998ce1d2e352f522ff69937ee55ed69a20d649dcc8abcfd7cd63c955844"},
+    {file = "py_aiger_bdd-3.0.0-py3-none-any.whl", hash = "sha256:4f7fb3689cb995e0dea40eddaa19b7abf86f886aefd38a30b6314bbd153a2df2"},
+]
+py-aiger-bv = [
+    {file = "py-aiger-bv-4.2.1.tar.gz", hash = "sha256:511722e34877171694812e562e6a3a3bf9e86b6319a3efd3260aa7581cbac4cc"},
+    {file = "py_aiger_bv-4.2.1-py3-none-any.whl", hash = "sha256:55a2e49b641c2426beec000f3e695cbaf1dd93c6c80806c2bf4f908f838cc39a"},
+]
 pycodestyle = [
     {file = "pycodestyle-2.6.0-py2.py3-none-any.whl", hash = "sha256:2295e7b2f6b5bd100585ebcb1f616591b652db8a741695b3d8f5d28bdc934367"},
     {file = "pycodestyle-2.6.0.tar.gz", hash = "sha256:c58a7d2815e0e8d7972bf1803331fb0152f867bd89adf8a01dfd55085434192e"},
@@ -434,6 +559,9 @@ pyflakes = [
 pyparsing = [
     {file = "pyparsing-2.4.7-py2.py3-none-any.whl", hash = "sha256:ef9d7589ef3c200abe66653d3f1ab1033c3c419ae9b9bdb1240a85b024efc88b"},
     {file = "pyparsing-2.4.7.tar.gz", hash = "sha256:c203ec8783bf771a155b207279b9bccb8dea02d8f0c9e5f8ead507bc3246ecc1"},
+]
+pyrsistent = [
+    {file = "pyrsistent-0.15.7.tar.gz", hash = "sha256:cdc7b5e3ed77bed61270a47d35434a30617b9becdf2478af76ad2c6ade307280"},
 ]
 pytest = [
     {file = "pytest-6.0.1-py3-none-any.whl", hash = "sha256:8b6007800c53fdacd5a5c192203f4e531eb2a1540ad9c752e052ec0f7143dbad"},
@@ -454,6 +582,10 @@ sortedcontainers = [
 toml = [
     {file = "toml-0.10.1-py2.py3-none-any.whl", hash = "sha256:bda89d5935c2eac546d648028b9901107a595863cb36bae0c73ac804a9b4ce88"},
     {file = "toml-0.10.1.tar.gz", hash = "sha256:926b612be1e5ce0634a2ca03470f95169cf16f939018233a670519cb4ac58b0f"},
+]
+toposort = [
+    {file = "toposort-1.5-py2.py3-none-any.whl", hash = "sha256:d80128b83b411d503b0cdb4a8f172998bc1d3b434b6402a349b8ebd734d51a80"},
+    {file = "toposort-1.5.tar.gz", hash = "sha256:dba5ae845296e3bf37b042c640870ffebcdeb8cd4df45adaa01d8c5476c557dd"},
 ]
 zipp = [
     {file = "zipp-3.1.0-py3-none-any.whl", hash = "sha256:aa36550ff0c0b7ef7fa639055d797116ee891440eac1a56f378e2d3179e0320b"},
