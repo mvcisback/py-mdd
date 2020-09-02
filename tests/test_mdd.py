@@ -41,6 +41,5 @@ def test_interface():
 
     func = interface.constantly("y")
     result = func({'myvar1': 'x', 'myvar2': 'x', 'myvar3': 'x'})
-    breakpoint()
     
     
