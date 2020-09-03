@@ -115,3 +115,18 @@ def test_override():
     test = x.expr() == x.encode(2)
     func2 = func.override(test=test, value=0)
     assert func2({'x': 2, 'y': 6, 'z': 9}) == 0
+
+
+def test_partial():
+    interface = mdd.Interface(
+        inputs={
+            "x": [1, 2, 3],
+            "y": [6, 5], 
+            "z": [7, 9, 8],
+        }, 
+        output=[-1, 0],
+    )
+    x = interface.var('x')
+
+    func = interface.constantly(-1)
+    func2 = func({'x': 2})

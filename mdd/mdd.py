@@ -175,15 +175,11 @@ class DecisionDiagram:
                              f"interface.\n symmetric difference={diff}")
 
     def __call__(self, inputs):
-        input_vars = self.interface.inputs
-        encoded_inputs = {
-            var.name: var.encode(inputs[var.name]) for var in input_vars
-        }
-        assert self.interface.valid()(encoded_inputs)[0]
-
         vals = {}
-        for var in self.interface.inputs:
-            encoded = encoded_inputs[var.name]
+        for name, value in inputs.items():
+            var = self.interface.var(name)
+            encoded = var.encode(value)
+            assert var.valid({var.name: encoded})[0]
 
             # Turn bitvector into individual assignments.
             bundle = var.bundle
@@ -191,6 +187,11 @@ class DecisionDiagram:
             vals.update(bundle.blast(encoded))
 
         bdd = self.bdd.let(**vals)
+
+        if set(inputs) < {var.name for var in self.interface.inputs}:
+            assert bdd.dag_size >= 2
+            return attr.evolve(self, bdd=bdd)
+
         assert bdd.dag_size == 2, "Result should be single variable BDD."
 
         # Return which decision this was.
