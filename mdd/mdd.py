@@ -65,6 +65,7 @@ class Variable:
         return self.bundle.size
 
     def expr(self) -> BV.UnsignedBVExpr:
+        """Returns Aiger BitVector representing this variable."""
         return BV.uatom(self._encoding_size, self.name)
 
 
@@ -82,6 +83,7 @@ def pow2_exponent(val: int) -> int:
 
 
 def to_bdd(circ_or_expr, manager: Optional[BDD] = None) -> BDD:
+    """Convert py-aiger compatible object into a BDD."""
     return aiger_bdd.to_bdd(circ_or_expr, manager=manager, renamer=lambda _, x: x)[0]
 
 
@@ -89,7 +91,15 @@ Domain = Union[Iterable[Any], Variable]
 
 
 def to_var(domain: Domain, name: Optional[str] = None) -> Variable:
-    """Create BDD representation of a variable taking on values in `domain`."""
+    """Create a named variable taking on values in `domain`.
+
+    Uses a 1-hot encoding of domain, i.e., one variable per
+    element. For more efficient encoding consider creating Variable
+    directly.
+
+    If `name is None`, then unique name selected when creating
+    Variable.
+    """
     if isinstance(domain, Variable):
         return domain if (name is None) else domain.with_name(name)
     if name is None:
@@ -141,6 +151,7 @@ class Interface:
         return reduce(lambda x, y: x & y, valid_tests)
 
     def constantly(self, output: Any, manager: Optional[BDD] = None) -> MDD:
+        """Return MDD returns `output` for any input."""
         encoded = self.output.encode(output)
         assert self.output.valid({self.output.name: encoded})[0]
 
@@ -151,12 +162,17 @@ class Interface:
         return DecisionDiagram(interface=self, bdd=bdd)
 
     def lift(self, bdd_or_aig, manager: None = None) -> MDD:
+        """Wrap bdd or py-aiger object using this interface.
+
+        Note: Output is assumed to be 1-hot encoded!
+        """
         if hasattr(bdd_or_aig, "aig"):
             bdd = to_bdd(bdd_or_aig)
 
         return DecisionDiagram(interface=self, bdd=bdd)
 
     def var(self, name: str) -> Variable:
+        """Get `Variable` for `name` in this interface."""
         return self._inputs.get(name, self.output)
 
 
@@ -259,4 +275,4 @@ class DecisionDiagram:
 MDD = DecisionDiagram
 
 
-__all__ = ["DecisionDiagram", "Interface", "Variable", "BDD", "to_var", "to_bdd"]
+__all__ = ["DecisionDiagram", "Interface", "Variable", "to_var", "to_bdd"]

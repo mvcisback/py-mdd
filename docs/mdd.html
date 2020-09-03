@@ -63,7 +63,7 @@ class Variable:
         return aiger_bdd.count(self.valid)
 
     @valid.validator
-    def check_bitvector_input(self, _: Attribute, value: UnsignedBVExpr) -&gt; None:
+    def check_bitvector_input(self, _: Attribute, value: UnsignedBVExpr):
         if len(value.inputs) != 1:
             raise ValueError(&#34;valid must be over single bitvector input!&#34;)
 
@@ -93,6 +93,7 @@ class Variable:
         return self.bundle.size
 
     def expr(self) -&gt; BV.UnsignedBVExpr:
+        &#34;&#34;&#34;Returns Aiger BitVector representing this variable.&#34;&#34;&#34;
         return BV.uatom(self._encoding_size, self.name)
 
 
@@ -109,7 +110,8 @@ def pow2_exponent(val: int) -&gt; int:
     return count
 
 
-def to_bdd(circ_or_expr: UnsignedBVExpr, manager: Optional[BDD] = None) -&gt; BDD:
+def to_bdd(circ_or_expr, manager: Optional[BDD] = None) -&gt; BDD:
+    &#34;&#34;&#34;Convert py-aiger compatible object into a BDD.&#34;&#34;&#34;
     return aiger_bdd.to_bdd(circ_or_expr, manager=manager, renamer=lambda _, x: x)[0]
 
 
@@ -117,7 +119,15 @@ Domain = Union[Iterable[Any], Variable]
 
 
 def to_var(domain: Domain, name: Optional[str] = None) -&gt; Variable:
-    &#34;&#34;&#34;Create BDD representation of a variable taking on values in `domain`.&#34;&#34;&#34;
+    &#34;&#34;&#34;Create a named variable taking on values in `domain`.
+    
+    Uses a 1-hot encoding of domain, i.e., one variable per
+    element. For more efficient encoding consider creating Variable
+    directly.
+
+    If `name is None`, then unique name selected when creating
+    Variable.
+    &#34;&#34;&#34;
     if isinstance(domain, Variable):
         return domain if (name is None) else domain.with_name(name)
     if name is None:
@@ -154,7 +164,7 @@ class Interface:
     output: Variable = attr.ib(converter=to_var)
     applied: FrozenSet[str] = frozenset()
 
-    def __attrs_post_init__(self) -&gt; None:
+    def __attrs_post_init__(self):
         names = list(self._inputs.keys()) + [self.output.name]
         if len(names) != len(set(names)):
             raise ValueError(&#34;All input names must be unique!&#34;)
@@ -169,6 +179,7 @@ class Interface:
         return reduce(lambda x, y: x &amp; y, valid_tests)
 
     def constantly(self, output: Any, manager: Optional[BDD] = None) -&gt; MDD:
+        &#34;&#34;&#34;Return MDD returns `output` for any input.&#34;&#34;&#34;
         encoded = self.output.encode(output)
         assert self.output.valid({self.output.name: encoded})[0]
 
@@ -178,13 +189,18 @@ class Interface:
         bdd = to_bdd(expr, manager=manager)
         return DecisionDiagram(interface=self, bdd=bdd)
 
-    def lift(self, bdd_or_aig: UnsignedBVExpr, manager: None = None) -&gt; MDD:
+    def lift(self, bdd_or_aig, manager: None = None) -&gt; MDD:
+        &#34;&#34;&#34;Wrap bdd or py-aiger object using this interface.
+        
+        Note: Output is assumed to be 1-hot encoded!
+        &#34;&#34;&#34;
         if hasattr(bdd_or_aig, &#34;aig&#34;):
             bdd = to_bdd(bdd_or_aig)
 
         return DecisionDiagram(interface=self, bdd=bdd)
 
     def var(self, name: str) -&gt; Variable:
+        &#34;&#34;&#34;Get `Variable` for `name` in this interface.&#34;&#34;&#34;
         return self._inputs.get(name, self.output)
 
 
@@ -193,7 +209,7 @@ class DecisionDiagram:
     interface: Interface
     bdd: BDD
 
-    def __attrs_post_init__(self) -&gt; None:
+    def __attrs_post_init__(self):
         &#34;&#34;&#34;Check that bdd conforms to interface.&#34;&#34;&#34;
         bdd_vars: Set[str] = set(self.bdd.bdd.vars)
         interface_vars: Set[str] = set()
@@ -243,7 +259,7 @@ class DecisionDiagram:
         assert 0 &lt;= idx &lt; output_var._encoding_size
         return output_var.decode(1 &lt;&lt; idx)
 
-    def order(self, var_names: Sequence[str]) -&gt; None:
+    def order(self, var_names: Sequence[str]):
         &#34;&#34;&#34;Reorder underlying BDD to respect order seen in inputs.
 
         As a side effect, this function turns off reordering.
@@ -263,7 +279,7 @@ class DecisionDiagram:
         self.bdd.bdd.reorder(levels)
         self.bdd.bdd.configure(reordering=False)
 
-    def override(self, test: UnsignedBVExpr, value: Union[Any, MDD]) -&gt; MDD:
+    def override(self, test, value: Union[Any, MDD]) -&gt; MDD:
         &#34;&#34;&#34;Return MDD where `value if test else self`.
 
         Args:
@@ -287,7 +303,7 @@ class DecisionDiagram:
 MDD = DecisionDiagram
 
 
-__all__ = [&#34;DecisionDiagram&#34;, &#34;Interface&#34;, &#34;Variable&#34;, &#34;BDD&#34;, &#34;to_var&#34;, &#34;to_bdd&#34;]</code></pre>
+__all__ = [&#34;DecisionDiagram&#34;, &#34;Interface&#34;, &#34;Variable&#34;, &#34;to_var&#34;, &#34;to_bdd&#34;]</code></pre>
 </details>
 </section>
 <section>
@@ -298,15 +314,16 @@ __all__ = [&#34;DecisionDiagram&#34;, &#34;Interface&#34;, &#34;Variable&#34;, &
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
 <dt id="mdd.mdd.to_bdd"><code class="name flex">
-<span>def <span class="ident">to_bdd</span></span>(<span>circ_or_expr: UnsignedBVExpr, manager: Optional[<a title="mdd.mdd.BDD" href="#mdd.mdd.BDD">BDD</a>] = None) ‑> dd.autoref.BDD</span>
+<span>def <span class="ident">to_bdd</span></span>(<span>circ_or_expr, manager: Optional[BDD] = None) ‑> dd.autoref.BDD</span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Convert py-aiger compatible object into a BDD.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def to_bdd(circ_or_expr: UnsignedBVExpr, manager: Optional[BDD] = None) -&gt; BDD:
+<pre><code class="python">def to_bdd(circ_or_expr, manager: Optional[BDD] = None) -&gt; BDD:
+    &#34;&#34;&#34;Convert py-aiger compatible object into a BDD.&#34;&#34;&#34;
     return aiger_bdd.to_bdd(circ_or_expr, manager=manager, renamer=lambda _, x: x)[0]</code></pre>
 </details>
 </dd>
@@ -314,13 +331,26 @@ __all__ = [&#34;DecisionDiagram&#34;, &#34;Interface&#34;, &#34;Variable&#34;, &
 <span>def <span class="ident">to_var</span></span>(<span>domain: Domain, name: Optional[str] = None) ‑> <a title="mdd.mdd.Variable" href="#mdd.mdd.Variable">Variable</a></span>
 </code></dt>
 <dd>
-<div class="desc"><p>Create BDD representation of a variable taking on values in <code>domain</code>.</p></div>
+<div class="desc"><p>Create a named variable taking on values in <code>domain</code>.</p>
+<p>Uses a 1-hot encoding of domain, i.e., one variable per
+element. For more efficient encoding consider creating Variable
+directly.</p>
+<p>If <code>name is None</code>, then unique name selected when creating
+Variable.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def to_var(domain: Domain, name: Optional[str] = None) -&gt; Variable:
-    &#34;&#34;&#34;Create BDD representation of a variable taking on values in `domain`.&#34;&#34;&#34;
+    &#34;&#34;&#34;Create a named variable taking on values in `domain`.
+    
+    Uses a 1-hot encoding of domain, i.e., one variable per
+    element. For more efficient encoding consider creating Variable
+    directly.
+
+    If `name is None`, then unique name selected when creating
+    Variable.
+    &#34;&#34;&#34;
     if isinstance(domain, Variable):
         return domain if (name is None) else domain.with_name(name)
     if name is None:
@@ -345,741 +375,9 @@ __all__ = [&#34;DecisionDiagram&#34;, &#34;Interface&#34;, &#34;Variable&#34;, &
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
-<dt id="mdd.mdd.BDD"><code class="flex name class">
-<span>class <span class="ident">BDD</span></span>
-<span>(</span><span>levels=None)</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Shared ordered binary decision diagram.</p>
-<p>It takes and returns <code>Function</code> instances,
-which automate reference counting.</p>
-<h2 id="attributes">Attributes</h2>
-<ul>
-<li><code>vars</code>: <code>dict</code> mapping <code>variables</code> to <code>int</code> levels
-Do not assign the <code>dict</code> itself.
-For docstrings, refer to methods of <code>dd.bdd.BDD</code>,
-with the difference that <code>Function</code>s replace nodes
-as arguments and returned types.</li>
-</ul></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">class BDD(_abc.BDD):
-    &#34;&#34;&#34;Shared ordered binary decision diagram.
-
-    It takes and returns `Function` instances,
-    which automate reference counting.
-
-    Attributes:
-
-      - `vars`: `dict` mapping `variables` to `int` levels
-          Do not assign the `dict` itself.
-
-    For docstrings, refer to methods of `dd.bdd.BDD`,
-    with the difference that `Function`s replace nodes
-    as arguments and returned types.
-    &#34;&#34;&#34;
-    # omitted docstrings are inheritted from `super()`
-
-    def __init__(self, levels=None):
-        manager = _bdd.BDD(levels)
-        self._bdd = manager
-        self.vars = manager.vars
-
-    def __eq__(self, other):
-        return (self._bdd is other._bdd)
-
-    def __len__(self):
-        return len(self._bdd)
-
-    def __contains__(self, u):
-        assert self is u.bdd
-        return u.node in self._bdd
-
-    def __str__(self):
-        return (
-            &#39;Binary decision diagram (`dd.bdd.BDD` wrapper):\n&#39;
-            &#39;------------------------\n&#39;
-            &#39;\t {n_vars} BDD variables\n&#39;
-            &#39;\t {n} nodes\n&#39;).format(
-                n_vars=len(self.vars), n=len(self))
-
-    def _wrap(self, u):
-        &#34;&#34;&#34;Return `Function` for node `u`.
-
-        @param u: node in `self._bdd`
-        @type u: `int`
-        &#34;&#34;&#34;
-        assert u in self._bdd
-        return Function(u, self)
-
-    def configure(self, **kw):
-        return self._bdd.configure(**kw)
-
-    def succ(self, u):
-        i, v, w = self._bdd.succ(u.node)
-        v = self._wrap(v)
-        w = self._wrap(w)
-        return i, v, w
-
-    def incref(self, u):
-        self._bdd.incref(u.node)
-
-    def decref(self, u, **kw):
-        self._bdd.decref(u.node)
-
-    def add_var(self, var, level=None):
-        return self._bdd.add_var(var, level=level)
-
-    def var(self, var):
-        r = self._bdd.var(var)
-        return self._wrap(r)
-
-    def var_at_level(self, level):
-        return self._bdd.var_at_level(level)
-
-    def level_of_var(self, var):
-        return self._bdd.level_of_var(var)
-
-    @property
-    def var_levels(self):
-        return self.bdd.var_levels
-
-    def reorder(self, var_order=None):
-        reorder(self, var_order)
-
-    def copy(self, u, other):
-        assert u in self, u
-        if self is other:
-            log.warning(&#39;copying node to same manager&#39;)
-            return u
-        r = self._bdd.copy(u.node, other._bdd)
-        return other._wrap(r)
-
-    def support(self, u, as_levels=False):
-        assert u in self, u
-        return self._bdd.support(u.node, as_levels)
-
-    def let(self, definitions, u):
-        assert u in self, u
-        d = definitions
-        var = next(iter(d))
-        value = d[var]
-        if isinstance(value, Function):
-            d = {
-                var: value.node
-                for var, value in d.items()}
-        r = self._bdd.let(d, u.node)
-        return self._wrap(r)
-
-    def quantify(self, u, qvars, forall=False):
-        assert u in self, u
-        r = self._bdd.quantify(u.node, qvars, forall)
-        return self._wrap(r)
-
-    def forall(self, qvars, u):
-        return self.quantify(u, qvars, forall=True)
-
-    def exist(self, qvars, u):
-        return self.quantify(u, qvars, forall=False)
-
-    def ite(self, g, u, v):
-        assert g in self, g
-        assert u in self, u
-        assert v in self, v
-        r = self._bdd.ite(g.node, u.node, v.node)
-        return self._wrap(r)
-
-    def find_or_add(self, var, low, high):
-        &#34;&#34;&#34;Return node `IF var THEN high ELSE low`.&#34;&#34;&#34;
-        level = self.level_of_var(var)
-        r = self._bdd.find_or_add(level, low.node, high.node)
-        return self._wrap(r)
-
-    def count(self, u, nvars=None):
-        assert u in self, u
-        return self._bdd.count(u.node, nvars)
-
-    def pick_iter(self, u, care_vars=None):
-        assert u in self, u
-        return self._bdd.pick_iter(u.node, care_vars)
-
-    def add_expr(self, e):
-        r = self._bdd.add_expr(e)
-        return self._wrap(r)
-
-    def to_expr(self, u):
-        assert u in self, u
-        return self._bdd.to_expr(u.node)
-
-    def apply(self, op, u, v=None, w=None):
-        assert u in self, u
-        if v is None:
-            r = self._bdd.apply(op, u.node)
-        elif w is None:
-            assert v in self, v
-            r = self._bdd.apply(op, u.node, v.node)
-        else:
-            assert w in self, w
-            r = self._bdd.apply(op, u.node, v.node, w.node)
-        return self._wrap(r)
-
-    def _add_int(self, i):
-        r = self._bdd._add_int(i)
-        return self._wrap(r)
-
-    def cube(self, dvars):
-        r = self._bdd.cube(dvars)
-        return self._wrap(r)
-
-    def collect_garbage(self):
-        &#34;&#34;&#34;Recursively remove nodes with zero reference count.&#34;&#34;&#34;
-        self._bdd.collect_garbage()
-
-    def dump(self, filename, roots=None,
-             filetype=None, **kw):
-        if roots is not None:
-            roots = [u.node for u in roots]
-        self._bdd.dump(filename, roots=roots,
-                       filetype=filetype)
-
-    def load(self, filename, levels=True):
-        umap = self._bdd.load(filename, levels=levels)
-        umap = {u: self._wrap(umap[u]) for u in umap}
-        return umap
-
-    def assert_consistent(self):
-        self._bdd.assert_consistent()
-
-    @property
-    def false(self):
-        u = self._bdd.false
-        return self._wrap(u)
-
-    @property
-    def true(self):
-        u = self._bdd.true
-        return self._wrap(u)</code></pre>
-</details>
-<h3>Ancestors</h3>
-<ul class="hlist">
-<li>dd._abc.BDD</li>
-</ul>
-<h3>Instance variables</h3>
-<dl>
-<dt id="mdd.mdd.BDD.false"><code class="name">var <span class="ident">false</span></code></dt>
-<dd>
-<div class="desc"><p>Return Boolean constant false.</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">@property
-def false(self):
-    u = self._bdd.false
-    return self._wrap(u)</code></pre>
-</details>
-</dd>
-<dt id="mdd.mdd.BDD.true"><code class="name">var <span class="ident">true</span></code></dt>
-<dd>
-<div class="desc"><p>Return Boolean constant true.</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">@property
-def true(self):
-    u = self._bdd.true
-    return self._wrap(u)</code></pre>
-</details>
-</dd>
-<dt id="mdd.mdd.BDD.var_levels"><code class="name">var <span class="ident">var_levels</span></code></dt>
-<dd>
-<div class="desc"><p>Return <code>dict</code> that maps variables to levels.</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">@property
-def var_levels(self):
-    return self.bdd.var_levels</code></pre>
-</details>
-</dd>
-</dl>
-<h3>Methods</h3>
-<dl>
-<dt id="mdd.mdd.BDD.add_expr"><code class="name flex">
-<span>def <span class="ident">add_expr</span></span>(<span>self, e)</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Return node for expression <code>e</code>, after adding it.</p>
-<p>If you would like to use your own parser,
-you can use utilities from <code>dd._parser</code>.</p>
-<p>@type expr: <code>str</code></p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def add_expr(self, e):
-    r = self._bdd.add_expr(e)
-    return self._wrap(r)</code></pre>
-</details>
-</dd>
-<dt id="mdd.mdd.BDD.add_var"><code class="name flex">
-<span>def <span class="ident">add_var</span></span>(<span>self, var, level=None)</span>
-</code></dt>
-<dd>
-<div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def add_var(self, var, level=None):
-    return self._bdd.add_var(var, level=level)</code></pre>
-</details>
-</dd>
-<dt id="mdd.mdd.BDD.apply"><code class="name flex">
-<span>def <span class="ident">apply</span></span>(<span>self, op, u, v=None, w=None)</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Apply operator <code>op</code> to nodes <code>u</code> and <code>v</code>.</p>
-<p>@type op: <code>str</code> in:
-- <code>'not', '~', '!'</code>
-- <code>'and', '/\', '&amp;', '&amp;&amp;'</code>
-- <code>'or', '\/', '|', '||'</code>
-- <code>'xor', '#', '^'</code>
-- <code>'=&gt;', '-&gt;', 'implies'</code>
-- <code>'&lt;=&gt;', '&lt;-&gt;', 'equiv'</code>
-- <code>'diff', '-'</code>
-- <code>'\A', 'forall'</code>
-- <code>'\E', 'exists'</code>
-- <code>'ite'</code>
-@type u, v, w: nodes</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def apply(self, op, u, v=None, w=None):
-    assert u in self, u
-    if v is None:
-        r = self._bdd.apply(op, u.node)
-    elif w is None:
-        assert v in self, v
-        r = self._bdd.apply(op, u.node, v.node)
-    else:
-        assert w in self, w
-        r = self._bdd.apply(op, u.node, v.node, w.node)
-    return self._wrap(r)</code></pre>
-</details>
-</dd>
-<dt id="mdd.mdd.BDD.assert_consistent"><code class="name flex">
-<span>def <span class="ident">assert_consistent</span></span>(<span>self)</span>
-</code></dt>
-<dd>
-<div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def assert_consistent(self):
-    self._bdd.assert_consistent()</code></pre>
-</details>
-</dd>
-<dt id="mdd.mdd.BDD.collect_garbage"><code class="name flex">
-<span>def <span class="ident">collect_garbage</span></span>(<span>self)</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Recursively remove nodes with zero reference count.</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def collect_garbage(self):
-    &#34;&#34;&#34;Recursively remove nodes with zero reference count.&#34;&#34;&#34;
-    self._bdd.collect_garbage()</code></pre>
-</details>
-</dd>
-<dt id="mdd.mdd.BDD.configure"><code class="name flex">
-<span>def <span class="ident">configure</span></span>(<span>self, **kw)</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Read and apply parameter values.</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def configure(self, **kw):
-    return self._bdd.configure(**kw)</code></pre>
-</details>
-</dd>
-<dt id="mdd.mdd.BDD.copy"><code class="name flex">
-<span>def <span class="ident">copy</span></span>(<span>self, u, other)</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Copy operator <code>u</code> from <code>self</code> to <code>other</code> manager.</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def copy(self, u, other):
-    assert u in self, u
-    if self is other:
-        log.warning(&#39;copying node to same manager&#39;)
-        return u
-    r = self._bdd.copy(u.node, other._bdd)
-    return other._wrap(r)</code></pre>
-</details>
-</dd>
-<dt id="mdd.mdd.BDD.count"><code class="name flex">
-<span>def <span class="ident">count</span></span>(<span>self, u, nvars=None)</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Return number of models of node <code>u</code>.</p>
-<p>@param n: number of variables to assume.</p>
-<pre><code>If omitted, then assume those in &lt;code&gt;support(u)&lt;/code&gt;.
-The levels of variables outside support
-are ignored in counting, and &lt;code&gt;n&lt;/code&gt; used to
-increase the result at the end of recursion.
-</code></pre></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def count(self, u, nvars=None):
-    assert u in self, u
-    return self._bdd.count(u.node, nvars)</code></pre>
-</details>
-</dd>
-<dt id="mdd.mdd.BDD.cube"><code class="name flex">
-<span>def <span class="ident">cube</span></span>(<span>self, dvars)</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Return node for conjunction of literals in <code>dvars</code>.</p>
-<p>@param dvars: <code>dict</code> that maps each variable to a <code>bool</code></p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def cube(self, dvars):
-    r = self._bdd.cube(dvars)
-    return self._wrap(r)</code></pre>
-</details>
-</dd>
-<dt id="mdd.mdd.BDD.decref"><code class="name flex">
-<span>def <span class="ident">decref</span></span>(<span>self, u, **kw)</span>
-</code></dt>
-<dd>
-<div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def decref(self, u, **kw):
-    self._bdd.decref(u.node)</code></pre>
-</details>
-</dd>
-<dt id="mdd.mdd.BDD.dump"><code class="name flex">
-<span>def <span class="ident">dump</span></span>(<span>self, filename, roots=None, filetype=None, **kw)</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Write BDDs to <code>filename</code>.</p>
-<p>The file type is inferred from the
-extension (case insensitive),
-unless a <code>filetype</code> is explicitly given.</p>
-<p>File types:</p>
-<ul>
-<li>pickle: <code>'.p'</code></li>
-<li>PDF: <code>'.pdf'</code></li>
-<li>PNG: <code>'.png'</code></li>
-<li>SVG: <code>'.svg'</code></li>
-</ul>
-<p>Dump nodes reachable from <code>roots</code>.
-If <code>roots is None</code>,
-then all nodes in the manager are dumped.</p>
-<p>@type filename: <code>str</code>
-@type filetype: <code>str</code>, e.g., <code>"pdf"</code>
-@type roots: container of nodes</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def dump(self, filename, roots=None,
-         filetype=None, **kw):
-    if roots is not None:
-        roots = [u.node for u in roots]
-    self._bdd.dump(filename, roots=roots,
-                   filetype=filetype)</code></pre>
-</details>
-</dd>
-<dt id="mdd.mdd.BDD.exist"><code class="name flex">
-<span>def <span class="ident">exist</span></span>(<span>self, qvars, u)</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Quantify <code>variables</code> in <code>u</code> existentially.</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def exist(self, qvars, u):
-    return self.quantify(u, qvars, forall=False)</code></pre>
-</details>
-</dd>
-<dt id="mdd.mdd.BDD.find_or_add"><code class="name flex">
-<span>def <span class="ident">find_or_add</span></span>(<span>self, var, low, high)</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Return node <code>IF var THEN high ELSE low</code>.</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def find_or_add(self, var, low, high):
-    &#34;&#34;&#34;Return node `IF var THEN high ELSE low`.&#34;&#34;&#34;
-    level = self.level_of_var(var)
-    r = self._bdd.find_or_add(level, low.node, high.node)
-    return self._wrap(r)</code></pre>
-</details>
-</dd>
-<dt id="mdd.mdd.BDD.forall"><code class="name flex">
-<span>def <span class="ident">forall</span></span>(<span>self, qvars, u)</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Quantify <code>variables</code> in <code>u</code> universally.</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def forall(self, qvars, u):
-    return self.quantify(u, qvars, forall=True)</code></pre>
-</details>
-</dd>
-<dt id="mdd.mdd.BDD.incref"><code class="name flex">
-<span>def <span class="ident">incref</span></span>(<span>self, u)</span>
-</code></dt>
-<dd>
-<div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def incref(self, u):
-    self._bdd.incref(u.node)</code></pre>
-</details>
-</dd>
-<dt id="mdd.mdd.BDD.ite"><code class="name flex">
-<span>def <span class="ident">ite</span></span>(<span>self, g, u, v)</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Ternary conditional <code>IF g THEN u ELSE v</code>.</p>
-<p>@param g: condition
-@param u: high
-@param v: low
-@type g, u, v: nodes
-@rtype: node</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def ite(self, g, u, v):
-    assert g in self, g
-    assert u in self, u
-    assert v in self, v
-    r = self._bdd.ite(g.node, u.node, v.node)
-    return self._wrap(r)</code></pre>
-</details>
-</dd>
-<dt id="mdd.mdd.BDD.let"><code class="name flex">
-<span>def <span class="ident">let</span></span>(<span>self, definitions, u)</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Substitute <code>definitions</code> for variables in <code>u</code>.</p>
-<p>@param definitions: <code>dict</code> that maps some variable
-names to Boolean values, or other variable names,
-or BDD nodes. All values should be of same type.</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def let(self, definitions, u):
-    assert u in self, u
-    d = definitions
-    var = next(iter(d))
-    value = d[var]
-    if isinstance(value, Function):
-        d = {
-            var: value.node
-            for var, value in d.items()}
-    r = self._bdd.let(d, u.node)
-    return self._wrap(r)</code></pre>
-</details>
-</dd>
-<dt id="mdd.mdd.BDD.level_of_var"><code class="name flex">
-<span>def <span class="ident">level_of_var</span></span>(<span>self, var)</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Return level of <code>var</code>, or <code>None</code>.</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def level_of_var(self, var):
-    return self._bdd.level_of_var(var)</code></pre>
-</details>
-</dd>
-<dt id="mdd.mdd.BDD.load"><code class="name flex">
-<span>def <span class="ident">load</span></span>(<span>self, filename, levels=True)</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Load nodes from pickle file <code>filename</code>.</p>
-<p>If <code>levels is True</code>,
-then load variables at the same levels.
-Otherwise, add missing variables.</p>
-<p>@type filename: <code>str</code>
-@return: map from dumped to loaded nodes
-@rtype: <code>dict</code></p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def load(self, filename, levels=True):
-    umap = self._bdd.load(filename, levels=levels)
-    umap = {u: self._wrap(umap[u]) for u in umap}
-    return umap</code></pre>
-</details>
-</dd>
-<dt id="mdd.mdd.BDD.pick_iter"><code class="name flex">
-<span>def <span class="ident">pick_iter</span></span>(<span>self, u, care_vars=None)</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Return generator over assignments.</p>
-<p>By default, <code>care_vars = support(u)</code>.
-Log a warning if <code>care_vars &lt; support(u)</code>.</p>
-<p>@param care_vars: cases:</p>
-<pre><code>1. &lt;code&gt;None&lt;/code&gt;: return (uniform) assignments that
-   include exactly those variables in &lt;code&gt;support(u)&lt;/code&gt;
-
-2. &lt;code&gt;set&lt;/code&gt;: return (possibly partial) assignments
-   that include at least all bits in &lt;code&gt;set&lt;/code&gt;
-</code></pre>
-<p>@rtype: generator of <code>dict(str: bool)</code></p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def pick_iter(self, u, care_vars=None):
-    assert u in self, u
-    return self._bdd.pick_iter(u.node, care_vars)</code></pre>
-</details>
-</dd>
-<dt id="mdd.mdd.BDD.quantify"><code class="name flex">
-<span>def <span class="ident">quantify</span></span>(<span>self, u, qvars, forall=False)</span>
-</code></dt>
-<dd>
-<div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def quantify(self, u, qvars, forall=False):
-    assert u in self, u
-    r = self._bdd.quantify(u.node, qvars, forall)
-    return self._wrap(r)</code></pre>
-</details>
-</dd>
-<dt id="mdd.mdd.BDD.reorder"><code class="name flex">
-<span>def <span class="ident">reorder</span></span>(<span>self, var_order=None)</span>
-</code></dt>
-<dd>
-<div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def reorder(self, var_order=None):
-    reorder(self, var_order)</code></pre>
-</details>
-</dd>
-<dt id="mdd.mdd.BDD.succ"><code class="name flex">
-<span>def <span class="ident">succ</span></span>(<span>self, u)</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Return <code>(level, low, high)</code> for node <code>u</code>.</p>
-<p>The manager uses complemented edges,
-so <code>low</code> and <code>high</code> correspond to the rectified <code>u</code>.</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def succ(self, u):
-    i, v, w = self._bdd.succ(u.node)
-    v = self._wrap(v)
-    w = self._wrap(w)
-    return i, v, w</code></pre>
-</details>
-</dd>
-<dt id="mdd.mdd.BDD.support"><code class="name flex">
-<span>def <span class="ident">support</span></span>(<span>self, u, as_levels=False)</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Return <code>set</code> of variables that node <code>u</code> depends on.</p>
-<p>@param as_levels: if <code>True</code>, then return variables
-as integers, insted of strings</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def support(self, u, as_levels=False):
-    assert u in self, u
-    return self._bdd.support(u.node, as_levels)</code></pre>
-</details>
-</dd>
-<dt id="mdd.mdd.BDD.to_expr"><code class="name flex">
-<span>def <span class="ident">to_expr</span></span>(<span>self, u)</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Return a Boolean expression for node <code>u</code>.</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def to_expr(self, u):
-    assert u in self, u
-    return self._bdd.to_expr(u.node)</code></pre>
-</details>
-</dd>
-<dt id="mdd.mdd.BDD.var"><code class="name flex">
-<span>def <span class="ident">var</span></span>(<span>self, var)</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Return node for variable named <code>var</code>.</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def var(self, var):
-    r = self._bdd.var(var)
-    return self._wrap(r)</code></pre>
-</details>
-</dd>
-<dt id="mdd.mdd.BDD.var_at_level"><code class="name flex">
-<span>def <span class="ident">var_at_level</span></span>(<span>self, level)</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Return variable with <code>level</code>.</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def var_at_level(self, level):
-    return self._bdd.var_at_level(level)</code></pre>
-</details>
-</dd>
-</dl>
-</dd>
 <dt id="mdd.mdd.DecisionDiagram"><code class="flex name class">
 <span>class <span class="ident">DecisionDiagram</span></span>
-<span>(</span><span>interface: <a title="mdd.mdd.Interface" href="#mdd.mdd.Interface">Interface</a>, bdd: <a title="mdd.mdd.BDD" href="#mdd.mdd.BDD">BDD</a>)</span>
+<span>(</span><span>interface: <a title="mdd.mdd.Interface" href="#mdd.mdd.Interface">Interface</a>, bdd: BDD)</span>
 </code></dt>
 <dd>
 <div class="desc"></div>
@@ -1091,7 +389,7 @@ as integers, insted of strings</p></div>
     interface: Interface
     bdd: BDD
 
-    def __attrs_post_init__(self) -&gt; None:
+    def __attrs_post_init__(self):
         &#34;&#34;&#34;Check that bdd conforms to interface.&#34;&#34;&#34;
         bdd_vars: Set[str] = set(self.bdd.bdd.vars)
         interface_vars: Set[str] = set()
@@ -1141,7 +439,7 @@ as integers, insted of strings</p></div>
         assert 0 &lt;= idx &lt; output_var._encoding_size
         return output_var.decode(1 &lt;&lt; idx)
 
-    def order(self, var_names: Sequence[str]) -&gt; None:
+    def order(self, var_names: Sequence[str]):
         &#34;&#34;&#34;Reorder underlying BDD to respect order seen in inputs.
 
         As a side effect, this function turns off reordering.
@@ -1161,7 +459,7 @@ as integers, insted of strings</p></div>
         self.bdd.bdd.reorder(levels)
         self.bdd.bdd.configure(reordering=False)
 
-    def override(self, test: UnsignedBVExpr, value: Union[Any, MDD]) -&gt; MDD:
+    def override(self, test, value: Union[Any, MDD]) -&gt; MDD:
         &#34;&#34;&#34;Return MDD where `value if test else self`.
 
         Args:
@@ -1224,7 +522,7 @@ as integers, insted of strings</p></div>
 </details>
 </dd>
 <dt id="mdd.mdd.DecisionDiagram.order"><code class="name flex">
-<span>def <span class="ident">order</span></span>(<span>self, var_names: Sequence[str]) ‑> NoneType</span>
+<span>def <span class="ident">order</span></span>(<span>self, var_names: Sequence[str])</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Reorder underlying BDD to respect order seen in inputs.</p>
@@ -1233,7 +531,7 @@ as integers, insted of strings</p></div>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def order(self, var_names: Sequence[str]) -&gt; None:
+<pre><code class="python">def order(self, var_names: Sequence[str]):
     &#34;&#34;&#34;Reorder underlying BDD to respect order seen in inputs.
 
     As a side effect, this function turns off reordering.
@@ -1255,7 +553,7 @@ as integers, insted of strings</p></div>
 </details>
 </dd>
 <dt id="mdd.mdd.DecisionDiagram.override"><code class="name flex">
-<span>def <span class="ident">override</span></span>(<span>self, test: UnsignedBVExpr, value: Union[Any, MDD]) ‑> <a title="mdd.mdd.DecisionDiagram" href="#mdd.mdd.DecisionDiagram">DecisionDiagram</a></span>
+<span>def <span class="ident">override</span></span>(<span>self, test, value: Union[Any, MDD]) ‑> <a title="mdd.mdd.DecisionDiagram" href="#mdd.mdd.DecisionDiagram">DecisionDiagram</a></span>
 </code></dt>
 <dd>
 <div class="desc"><p>Return MDD where <code>value if test else self</code>.</p>
@@ -1271,7 +569,7 @@ MDD.</dd>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def override(self, test: UnsignedBVExpr, value: Union[Any, MDD]) -&gt; MDD:
+<pre><code class="python">def override(self, test, value: Union[Any, MDD]) -&gt; MDD:
     &#34;&#34;&#34;Return MDD where `value if test else self`.
 
     Args:
@@ -1311,7 +609,7 @@ MDD.</dd>
     output: Variable = attr.ib(converter=to_var)
     applied: FrozenSet[str] = frozenset()
 
-    def __attrs_post_init__(self) -&gt; None:
+    def __attrs_post_init__(self):
         names = list(self._inputs.keys()) + [self.output.name]
         if len(names) != len(set(names)):
             raise ValueError(&#34;All input names must be unique!&#34;)
@@ -1326,6 +624,7 @@ MDD.</dd>
         return reduce(lambda x, y: x &amp; y, valid_tests)
 
     def constantly(self, output: Any, manager: Optional[BDD] = None) -&gt; MDD:
+        &#34;&#34;&#34;Return MDD returns `output` for any input.&#34;&#34;&#34;
         encoded = self.output.encode(output)
         assert self.output.valid({self.output.name: encoded})[0]
 
@@ -1335,13 +634,18 @@ MDD.</dd>
         bdd = to_bdd(expr, manager=manager)
         return DecisionDiagram(interface=self, bdd=bdd)
 
-    def lift(self, bdd_or_aig: UnsignedBVExpr, manager: None = None) -&gt; MDD:
+    def lift(self, bdd_or_aig, manager: None = None) -&gt; MDD:
+        &#34;&#34;&#34;Wrap bdd or py-aiger object using this interface.
+        
+        Note: Output is assumed to be 1-hot encoded!
+        &#34;&#34;&#34;
         if hasattr(bdd_or_aig, &#34;aig&#34;):
             bdd = to_bdd(bdd_or_aig)
 
         return DecisionDiagram(interface=self, bdd=bdd)
 
     def var(self, name: str) -&gt; Variable:
+        &#34;&#34;&#34;Get `Variable` for `name` in this interface.&#34;&#34;&#34;
         return self._inputs.get(name, self.output)</code></pre>
 </details>
 <h3>Class variables</h3>
@@ -1373,15 +677,16 @@ def inputs(self) -&gt; Iterable[Variable]:
 <h3>Methods</h3>
 <dl>
 <dt id="mdd.mdd.Interface.constantly"><code class="name flex">
-<span>def <span class="ident">constantly</span></span>(<span>self, output: Any, manager: Optional[<a title="mdd.mdd.BDD" href="#mdd.mdd.BDD">BDD</a>] = None) ‑> <a title="mdd.mdd.DecisionDiagram" href="#mdd.mdd.DecisionDiagram">DecisionDiagram</a></span>
+<span>def <span class="ident">constantly</span></span>(<span>self, output: Any, manager: Optional[BDD] = None) ‑> <a title="mdd.mdd.DecisionDiagram" href="#mdd.mdd.DecisionDiagram">DecisionDiagram</a></span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Return MDD returns <code>output</code> for any input.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def constantly(self, output: Any, manager: Optional[BDD] = None) -&gt; MDD:
+    &#34;&#34;&#34;Return MDD returns `output` for any input.&#34;&#34;&#34;
     encoded = self.output.encode(output)
     assert self.output.valid({self.output.name: encoded})[0]
 
@@ -1393,15 +698,20 @@ def inputs(self) -&gt; Iterable[Variable]:
 </details>
 </dd>
 <dt id="mdd.mdd.Interface.lift"><code class="name flex">
-<span>def <span class="ident">lift</span></span>(<span>self, bdd_or_aig: UnsignedBVExpr, manager: None = None) ‑> <a title="mdd.mdd.DecisionDiagram" href="#mdd.mdd.DecisionDiagram">DecisionDiagram</a></span>
+<span>def <span class="ident">lift</span></span>(<span>self, bdd_or_aig, manager: None = None) ‑> <a title="mdd.mdd.DecisionDiagram" href="#mdd.mdd.DecisionDiagram">DecisionDiagram</a></span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Wrap bdd or py-aiger object using this interface.</p>
+<p>Note: Output is assumed to be 1-hot encoded!</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def lift(self, bdd_or_aig: UnsignedBVExpr, manager: None = None) -&gt; MDD:
+<pre><code class="python">def lift(self, bdd_or_aig, manager: None = None) -&gt; MDD:
+    &#34;&#34;&#34;Wrap bdd or py-aiger object using this interface.
+    
+    Note: Output is assumed to be 1-hot encoded!
+    &#34;&#34;&#34;
     if hasattr(bdd_or_aig, &#34;aig&#34;):
         bdd = to_bdd(bdd_or_aig)
 
@@ -1427,12 +737,13 @@ def inputs(self) -&gt; Iterable[Variable]:
 <span>def <span class="ident">var</span></span>(<span>self, name: str) ‑> <a title="mdd.mdd.Variable" href="#mdd.mdd.Variable">Variable</a></span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Get <code><a title="mdd.mdd.Variable" href="#mdd.mdd.Variable">Variable</a></code> for <code>name</code> in this interface.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def var(self, name: str) -&gt; Variable:
+    &#34;&#34;&#34;Get `Variable` for `name` in this interface.&#34;&#34;&#34;
     return self._inputs.get(name, self.output)</code></pre>
 </details>
 </dd>
@@ -1460,7 +771,7 @@ def inputs(self) -&gt; Iterable[Variable]:
         return aiger_bdd.count(self.valid)
 
     @valid.validator
-    def check_bitvector_input(self, _: Attribute, value: UnsignedBVExpr) -&gt; None:
+    def check_bitvector_input(self, _: Attribute, value: UnsignedBVExpr):
         if len(value.inputs) != 1:
             raise ValueError(&#34;valid must be over single bitvector input!&#34;)
 
@@ -1490,6 +801,7 @@ def inputs(self) -&gt; Iterable[Variable]:
         return self.bundle.size
 
     def expr(self) -&gt; BV.UnsignedBVExpr:
+        &#34;&#34;&#34;Returns Aiger BitVector representing this variable.&#34;&#34;&#34;
         return BV.uatom(self._encoding_size, self.name)</code></pre>
 </details>
 <h3>Class variables</h3>
@@ -1537,7 +849,7 @@ def name(self) -&gt; str:
 <h3>Methods</h3>
 <dl>
 <dt id="mdd.mdd.Variable.check_bitvector_input"><code class="name flex">
-<span>def <span class="ident">check_bitvector_input</span></span>(<span>self, _: Attribute, value: UnsignedBVExpr) ‑> NoneType</span>
+<span>def <span class="ident">check_bitvector_input</span></span>(<span>self, _: Attribute, value: UnsignedBVExpr)</span>
 </code></dt>
 <dd>
 <div class="desc"></div>
@@ -1546,7 +858,7 @@ def name(self) -&gt; str:
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">@valid.validator
-def check_bitvector_input(self, _: Attribute, value: UnsignedBVExpr) -&gt; None:
+def check_bitvector_input(self, _: Attribute, value: UnsignedBVExpr):
     if len(value.inputs) != 1:
         raise ValueError(&#34;valid must be over single bitvector input!&#34;)</code></pre>
 </details>
@@ -1555,12 +867,13 @@ def check_bitvector_input(self, _: Attribute, value: UnsignedBVExpr) -&gt; None:
 <span>def <span class="ident">expr</span></span>(<span>self) ‑> aiger_bv.expr.UnsignedBVExpr</span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Returns Aiger BitVector representing this variable.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def expr(self) -&gt; BV.UnsignedBVExpr:
+    &#34;&#34;&#34;Returns Aiger BitVector representing this variable.&#34;&#34;&#34;
     return BV.uatom(self._encoding_size, self.name)</code></pre>
 </details>
 </dd>
@@ -1619,41 +932,6 @@ def check_bitvector_input(self, _: Attribute, value: UnsignedBVExpr) -&gt; None:
 </li>
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
-<li>
-<h4><code><a title="mdd.mdd.BDD" href="#mdd.mdd.BDD">BDD</a></code></h4>
-<ul class="two-column">
-<li><code><a title="mdd.mdd.BDD.add_expr" href="#mdd.mdd.BDD.add_expr">add_expr</a></code></li>
-<li><code><a title="mdd.mdd.BDD.add_var" href="#mdd.mdd.BDD.add_var">add_var</a></code></li>
-<li><code><a title="mdd.mdd.BDD.apply" href="#mdd.mdd.BDD.apply">apply</a></code></li>
-<li><code><a title="mdd.mdd.BDD.assert_consistent" href="#mdd.mdd.BDD.assert_consistent">assert_consistent</a></code></li>
-<li><code><a title="mdd.mdd.BDD.collect_garbage" href="#mdd.mdd.BDD.collect_garbage">collect_garbage</a></code></li>
-<li><code><a title="mdd.mdd.BDD.configure" href="#mdd.mdd.BDD.configure">configure</a></code></li>
-<li><code><a title="mdd.mdd.BDD.copy" href="#mdd.mdd.BDD.copy">copy</a></code></li>
-<li><code><a title="mdd.mdd.BDD.count" href="#mdd.mdd.BDD.count">count</a></code></li>
-<li><code><a title="mdd.mdd.BDD.cube" href="#mdd.mdd.BDD.cube">cube</a></code></li>
-<li><code><a title="mdd.mdd.BDD.decref" href="#mdd.mdd.BDD.decref">decref</a></code></li>
-<li><code><a title="mdd.mdd.BDD.dump" href="#mdd.mdd.BDD.dump">dump</a></code></li>
-<li><code><a title="mdd.mdd.BDD.exist" href="#mdd.mdd.BDD.exist">exist</a></code></li>
-<li><code><a title="mdd.mdd.BDD.false" href="#mdd.mdd.BDD.false">false</a></code></li>
-<li><code><a title="mdd.mdd.BDD.find_or_add" href="#mdd.mdd.BDD.find_or_add">find_or_add</a></code></li>
-<li><code><a title="mdd.mdd.BDD.forall" href="#mdd.mdd.BDD.forall">forall</a></code></li>
-<li><code><a title="mdd.mdd.BDD.incref" href="#mdd.mdd.BDD.incref">incref</a></code></li>
-<li><code><a title="mdd.mdd.BDD.ite" href="#mdd.mdd.BDD.ite">ite</a></code></li>
-<li><code><a title="mdd.mdd.BDD.let" href="#mdd.mdd.BDD.let">let</a></code></li>
-<li><code><a title="mdd.mdd.BDD.level_of_var" href="#mdd.mdd.BDD.level_of_var">level_of_var</a></code></li>
-<li><code><a title="mdd.mdd.BDD.load" href="#mdd.mdd.BDD.load">load</a></code></li>
-<li><code><a title="mdd.mdd.BDD.pick_iter" href="#mdd.mdd.BDD.pick_iter">pick_iter</a></code></li>
-<li><code><a title="mdd.mdd.BDD.quantify" href="#mdd.mdd.BDD.quantify">quantify</a></code></li>
-<li><code><a title="mdd.mdd.BDD.reorder" href="#mdd.mdd.BDD.reorder">reorder</a></code></li>
-<li><code><a title="mdd.mdd.BDD.succ" href="#mdd.mdd.BDD.succ">succ</a></code></li>
-<li><code><a title="mdd.mdd.BDD.support" href="#mdd.mdd.BDD.support">support</a></code></li>
-<li><code><a title="mdd.mdd.BDD.to_expr" href="#mdd.mdd.BDD.to_expr">to_expr</a></code></li>
-<li><code><a title="mdd.mdd.BDD.true" href="#mdd.mdd.BDD.true">true</a></code></li>
-<li><code><a title="mdd.mdd.BDD.var" href="#mdd.mdd.BDD.var">var</a></code></li>
-<li><code><a title="mdd.mdd.BDD.var_at_level" href="#mdd.mdd.BDD.var_at_level">var_at_level</a></code></li>
-<li><code><a title="mdd.mdd.BDD.var_levels" href="#mdd.mdd.BDD.var_levels">var_levels</a></code></li>
-</ul>
-</li>
 <li>
 <h4><code><a title="mdd.mdd.DecisionDiagram" href="#mdd.mdd.DecisionDiagram">DecisionDiagram</a></code></h4>
 <ul class="">
