@@ -26,34 +26,71 @@ run:
 
 # Usage
 
+For the impatient, here are two basic usage examples:
+
 ```python
-    interface = mdd.Interface(
-        inputs={
-            "x": [1, 2, 3],
-            "y": [6, 'w'], 
-            "z": [7, True, 8],
-        }, 
-        output=[-1, 0, 1],
-    )
-    func = interface.constantly(-1)
-    assert func({'x': 1, 'y': 'w', 'z': 8}) == -1
+import mdd
+
+interface = mdd.Interface(
+    inputs={
+        "x": [1, 2, 3],
+        "y": [6, 'w'], 
+        "z": [7, True, 8],
+    }, 
+    output=[-1, 0, 1],
+)
+func = interface.constantly(-1)
+assert func({'x': 1, 'y': 'w', 'z': 8}) == -1
 ```
 
-The `mdd` api centers around three `DecisionDiagram` objects.
+## Variables, Interfaces, and Encodings
 
-  This
-object is a wrapper around a Binary Decision Diagram object (from
+
+func.override()
+
+
+The `mdd` api centers around three objects:
+
+1. `Variable`: Representation of a named variable taking on values in
+   from a finite set described by an aiger circuit.
+1. `Interface`: Description of inputs and outputs of a Multi-valued Decision Diagram.
+1. `DecisionDiagram`: Representation of a Multi-valued Decision Diagram that conforms
+   to an interface.
+
+This object is a wrapper around a Binary Decision Diagram object (from
 [dd](https://github.com/tulip-control/dd)).
 
+By default, variables use one-hot encoding, but all input variables
+can use arbitrary encodings.
 
-# Interfaces, Inputs, and Outputs
+```python
+# One hot encoded.
+var1 = mdd.to_var(domain=["x", "y", "z"], name="myvar1")
 
-# MDD Manipulations
-1. [ ] partial assigments.
-1. [ ] overrides.
-1. [ ] setting order.
-1. [ ] wrapping lifting a bdd.
+# Copied from another variable.
+var2 = var1.with_name("myvar2")
 
-# Variables and Encodings
+# Hand crafted encoding using `py-aiger`.
 
+import aiger_bv
 
+# Named 2-length bitvector circuit.
+bvexpr = aiger_bv.uatom(2, 'myvar3')
+
+domain = ('a', 'b', 'c')
+var3 = mdd.Variable(
+     encode=domain.index,        # Any -> int
+     decode=domain.__getitem__,  # int -> Any
+     valid=bvexpr < 4,           # 0b11 is invalid!
+)
+
+interface = mdd.Interface(inputs=[var1, var2, var3], output={1, 2, 3})
+```
+
+## MDD Manipulations
+
+TODO
+
+## BDD <-> MDD
+
+TODO
