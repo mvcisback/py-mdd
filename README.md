@@ -5,7 +5,7 @@ Multivalued Decision Diagrams.
 
 [![Build Status](https://cloud.drone.io/api/badges/mvcisback/py-mdd/status.svg)](https://cloud.drone.io/mvcisback/py-mdd)
 [![codecov](https://codecov.io/gh/mvcisback/py-mdd/branch/master/graph/badge.svg)](https://codecov.io/gh/mvcisback/py-mdd)
-[![PyPI version](https://badge.fury.io/py/py-mdd.svg)](https://badge.fury.io/py/mdd)
+[![PyPI version](https://badge.fury.io/py/mdd.svg)](https://badge.fury.io/py/mdd)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 
