@@ -127,6 +127,6 @@ def test_partial():
     x = interface.var('x')
 
     func = interface.constantly(-1)
-    func2 = func({'x': 2})
+    func2 = func.let({'x': 2})
     assert isinstance(func2, mdd.DecisionDiagram)
     assert func2({'y': 6, 'z': 9}) == -1

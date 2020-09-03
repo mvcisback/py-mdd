@@ -177,7 +177,8 @@ class DecisionDiagram:
             raise ValueError("Input AIG or BDD does not agree with this"
                              f"interface.\n symmetric difference={diff}")
 
-    def __call__(self, inputs):
+    def let(self, inputs) -> MDD:
+        """Return MDD where subset of inputs have been applied."""
         vals = {}
         for name, value in inputs.items():
             var = self.interface.var(name)
@@ -193,11 +194,13 @@ class DecisionDiagram:
 
         io = self.interface
         active_inputs = {var.name for var in io.inputs} - io.applied
-        if set(inputs) < active_inputs:
-            assert bdd.dag_size >= 2
-            io2 = attr.evolve(io, applied=io.applied | set(inputs))
-            return attr.evolve(self, bdd=bdd, interface=io2)
+        io2 = attr.evolve(io, applied=io.applied | set(inputs))
+        return attr.evolve(self, bdd=bdd, interface=io2)
+        
 
+    def __call__(self, inputs):
+        """Evaluate MDD on inputs."""
+        bdd = self.let(inputs).bdd
         assert bdd.dag_size == 2, "Result should be single variable BDD."
 
         # Return which decision this was.
@@ -229,6 +232,13 @@ class DecisionDiagram:
         self.bdd.bdd.configure(reordering=False)
 
     def override(self, test, value: Union[Any, MDD]) -> MDD:
+        """Return MDD where `value if test else self`.
+        
+        Args:
+          test: Can be a BDD or and py-aiger compatible object.
+          value: Either an element of co-domain or another compatible
+                 MDD.
+        """
         manager = self.bdd.bdd
         if not isinstance(value, DecisionDiagram):
             value = self.interface.constantly(value, manager=manager).bdd
