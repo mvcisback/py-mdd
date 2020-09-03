@@ -74,7 +74,6 @@ def test_lift():
     assert func({'x': 2, 'y': 6, 'z': 7}) == 0    
 
 
-
 def test_order():
     interface = mdd.Interface(
         inputs={
@@ -99,3 +98,20 @@ def test_order():
         f"{interface.output.name}[0]": 8,
         f"{interface.output.name}[1]": 9,
     }
+
+
+def test_override():
+    interface = mdd.Interface(
+        inputs={
+            "x": [1, 2, 3],
+            "y": [6, 5], 
+            "z": [7, 9, 8],
+        }, 
+        output=[-1, 0],
+    )
+    x = interface.var('x')
+
+    func = interface.constantly(-1)
+    test = x.expr() == x.encode(2)
+    func2 = func.override(test=test, value=0)
+    assert func2({'x': 2, 'y': 6, 'z': 9}) == 0

@@ -76,8 +76,9 @@ def pow2_exponent(val: int) -> int:
     return count
 
 
-def to_bdd(circ_or_expr) -> BDD:
-    return aiger_bdd.to_bdd(circ_or_expr, renamer=lambda _, x: x)[0]
+def to_bdd(circ_or_expr, manager=None) -> BDD:
+    renamer = lambda _, x: x
+    return aiger_bdd.to_bdd(circ_or_expr, renamer=renamer, manager=manager)[0]
 
 
 Domain = Union[Iterable[Any], Variable]
@@ -134,20 +135,24 @@ class Interface:
         valid_tests = (var.valid for var in self.inputs)
         return reduce(lambda x, y: x & y, valid_tests)
 
-    def constantly(self, output: Any, manager=None) -> DD:
+    def constantly(self, output: Any, manager=None) -> MDD:
         encoded = self.output.encode(output)
         assert self.output.valid({self.output.name: encoded})[0]
 
         # Create BDD that only depends on hot variable in encoded.
         index = pow2_exponent(encoded)
         expr = self.output.expr()[index] & self.valid()
-        return DecisionDiagram(interface=self, bdd=to_bdd(expr))
+        bdd = to_bdd(expr, manager=manager)
+        return DecisionDiagram(interface=self, bdd=bdd)
 
-    def lift(self, bdd_or_aig, manager=None) -> DD:
+    def lift(self, bdd_or_aig, manager=None) -> MDD:
         if hasattr(bdd_or_aig, "aig"):
             bdd = to_bdd(bdd_or_aig)
 
         return DecisionDiagram(interface=self, bdd=bdd)
+
+    def var(self, name):
+        return self._inputs.get(name, self.output)
 
 
 @attr.s(frozen=True, auto_attribs=True)
@@ -216,11 +221,21 @@ class DecisionDiagram:
         self.bdd.bdd.reorder(levels)
         self.bdd.bdd.configure(reordering=False)
 
-    def override(self, test: ValueLike, pos: DD) -> DD:
-        pass
+    def override(self, test, value: Union[Any, MDD]) -> MDD:
+        manager = self.bdd.bdd
+        if not isinstance(value, DecisionDiagram):
+            value = self.interface.constantly(value, manager=manager).bdd
 
-DD = DecisionDiagram
-ValueLike = Union[Assignment, BDD]
+        if hasattr(test, "aig"):
+            test = to_bdd(test, manager=manager)
+
+        # Assuming test and value are BDDs now.
+        #         test => value    ~test => self.bdd.
+        bdd = ((~test) | value) & (test | self.bdd)
+        return attr.evolve(self, bdd=bdd)
+
+
+MDD = DecisionDiagram
 
 
 __all__ = ["DecisionDiagram", "Interface", "Variable", "BDD", "to_var", "to_bdd"]
