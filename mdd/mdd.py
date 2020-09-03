@@ -5,16 +5,19 @@ import itertools
 import uuid
 from functools import reduce
 from typing import Any, Callable, Dict, Hashable
-from typing import Iterable, Optional, Sequence, Tuple, Union
+from typing import Iterable, Optional, Sequence, Set, Tuple, Union
 from typing import FrozenSet
 
 import aiger_bv as BV
 import aiger_bdd
 import attr
+from aiger_bv.bundle import Bundle
+from aiger_bv.expr import UnsignedBVExpr
+from attr._make import Attribute
+from dd.autoref import BDD
 
 
 Assignment = Tuple[Dict[str, Any], Any]
-BDD = Any
 
 INDEX_SPLITTER = re.compile(r"(.*)\[(.*)\]")
 
@@ -22,38 +25,39 @@ INDEX_SPLITTER = re.compile(r"(.*)\[(.*)\]")
 @attr.s(frozen=True, auto_attribs=True)
 class Variable:
     """BDD representation of a multi-valued variable."""
+
     valid: BV.UnsignedBVExpr = attr.ib()
-    encode: Callable[[Hashable], int]
-    decode: Callable[[int], Hashable]
+    encode: Callable[[Any], int]
+    decode: Callable[[int], Any]
 
     def size(self) -> int:
         """Returns number of values Variable can take on."""
         return aiger_bdd.count(self.valid)
 
     @valid.validator
-    def check_bitvector_input(self, _, value):
+    def check_bitvector_input(self, _: Attribute, value: UnsignedBVExpr):
         if len(value.inputs) != 1:
             raise ValueError("valid must be over single bitvector input!")
 
     @property
-    def _name_bundle(self):
+    def _name_bundle(self) -> Tuple[str, int]:
         imap = self.valid.aigbv.imap
         (name, bundle), *_ = imap.items()
         return name, bundle
 
     @property
-    def name(self):
+    def name(self) -> str:
         return self._name_bundle[0]
 
     @property
-    def bundle(self):
+    def bundle(self) -> Bundle:
         return self.valid.aigbv.imap[self.name]
 
-    def with_name(self, name) -> Variable:
+    def with_name(self, name: str) -> Variable:
         """Create a copy of this Variable with a new name."""
         if self.name == name:
             return self
-        valid_circ = self.valid.aigbv['i', {self.name: name}]
+        valid_circ = self.valid.aigbv["i", {self.name: name}]
         return attr.evolve(self, valid=BV.UnsignedBVExpr(valid_circ))
 
     @property
@@ -77,9 +81,8 @@ def pow2_exponent(val: int) -> int:
     return count
 
 
-def to_bdd(circ_or_expr, manager=None) -> BDD:
-    return aiger_bdd.to_bdd(
-        circ_or_expr, manager=manager, renamer=lambda _, x: x)[0]
+def to_bdd(circ_or_expr, manager: Optional[BDD] = None) -> BDD:
+    return aiger_bdd.to_bdd(circ_or_expr, manager=manager, renamer=lambda _, x: x)[0]
 
 
 Domain = Union[Iterable[Any], Variable]
@@ -118,6 +121,7 @@ def to_vars(vals: Union[Iterable[Variable], Dict[str, Domain]]) -> Variables:
 @attr.s(frozen=True, auto_attribs=True)
 class Interface:
     """Input output interface of Multi-valued Decision Diagram."""
+
     _inputs: Variables = attr.ib(converter=to_vars)
     output: Variable = attr.ib(converter=to_var)
     applied: FrozenSet[str] = frozenset()
@@ -136,7 +140,7 @@ class Interface:
         valid_tests = (var.valid for var in self.inputs)
         return reduce(lambda x, y: x & y, valid_tests)
 
-    def constantly(self, output: Any, manager=None) -> MDD:
+    def constantly(self, output: Any, manager: Optional[BDD] = None) -> MDD:
         encoded = self.output.encode(output)
         assert self.output.valid({self.output.name: encoded})[0]
 
@@ -146,13 +150,13 @@ class Interface:
         bdd = to_bdd(expr, manager=manager)
         return DecisionDiagram(interface=self, bdd=bdd)
 
-    def lift(self, bdd_or_aig, manager=None) -> MDD:
+    def lift(self, bdd_or_aig, manager: None = None) -> MDD:
         if hasattr(bdd_or_aig, "aig"):
             bdd = to_bdd(bdd_or_aig)
 
         return DecisionDiagram(interface=self, bdd=bdd)
 
-    def var(self, name):
+    def var(self, name: str) -> Variable:
         return self._inputs.get(name, self.output)
 
 
@@ -163,8 +167,8 @@ class DecisionDiagram:
 
     def __attrs_post_init__(self):
         """Check that bdd conforms to interface."""
-        bdd_vars = set(self.bdd.bdd.vars)
-        interface_vars = set()
+        bdd_vars: Set[str] = set(self.bdd.bdd.vars)
+        interface_vars: Set[str] = set()
 
         io = self.interface
         for var in itertools.chain(io.inputs, [io.output]):
@@ -172,12 +176,14 @@ class DecisionDiagram:
 
         if bdd_vars != interface_vars:
             diff = bdd_vars.symmetric_difference(interface_vars)
-            raise ValueError("Input AIG or BDD does not agree with this"
-                             f"interface.\n symmetric difference={diff}")
+            raise ValueError(
+                "Input AIG or BDD does not agree with this"
+                f"interface.\n symmetric difference={diff}"
+            )
 
-    def let(self, inputs) -> MDD:
+    def let(self, inputs: Dict[str, Any]) -> MDD:
         """Return MDD where subset of inputs have been applied."""
-        vals = {}
+        vals: Dict[str, bool] = {}
         for name, value in inputs.items():
             var = self.interface.var(name)
             encoded = var.encode(value)
@@ -194,14 +200,16 @@ class DecisionDiagram:
         io2 = attr.evolve(io, applied=io.applied | set(inputs))
         return attr.evolve(self, bdd=bdd, interface=io2)
 
-    def __call__(self, inputs):
+    def __call__(self, inputs: Dict[str, Any]) -> Any:
         """Evaluate MDD on inputs."""
         bdd = self.let(inputs).bdd
         assert bdd.dag_size == 2, "Result should be single variable BDD."
 
         # Return which decision this was.
-        name, idx = INDEX_SPLITTER.match(bdd.var).groups()
-        idx = int(idx)
+        match = INDEX_SPLITTER.match(bdd.var)
+        assert match is not None
+        name, idx_str = match.groups()
+        idx = int(idx_str)
         output_var = self.interface.output
         assert name == output_var.name
         assert 0 <= idx < output_var._encoding_size
@@ -213,7 +221,7 @@ class DecisionDiagram:
         As a side effect, this function turns off reordering.
         """
         io = self.interface
-        levels = {}
+        levels: Dict[str, int] = {}
         for name in var_names:
             offset = len(levels)
 
@@ -251,6 +259,4 @@ class DecisionDiagram:
 MDD = DecisionDiagram
 
 
-__all__ = [
-    "DecisionDiagram", "Interface", "Variable", "BDD", "to_var", "to_bdd"
-]
+__all__ = ["DecisionDiagram", "Interface", "Variable", "BDD", "to_var", "to_bdd"]
