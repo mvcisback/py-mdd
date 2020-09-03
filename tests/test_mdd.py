@@ -72,3 +72,30 @@ def test_lift():
 
     assert func({'x': 1, 'y': 6, 'z': 7}) == -1
     assert func({'x': 2, 'y': 6, 'z': 7}) == 0    
+
+
+
+def test_order():
+    interface = mdd.Interface(
+        inputs={
+            "x": [1, 2, 3],
+            "y": [6, 5], 
+            "z": [7, 9, 8],
+        }, 
+        output=[-1, 0],
+    )
+    func = interface.constantly(-1)
+    func.order(['y', 'x', 'z', interface.output.name])
+
+    assert func.bdd.bdd.vars == {
+        "y[0]": 0,
+        "y[1]": 1,
+        "x[0]": 2,
+        "x[1]": 3,
+        "x[2]": 4,
+        "z[0]": 5,
+        "z[1]": 6,
+        "z[2]": 7,
+        f"{interface.output.name}[0]": 8,
+        f"{interface.output.name}[1]": 9,
+    }

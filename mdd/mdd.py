@@ -105,26 +105,29 @@ def to_var(domain: Domain, name: Optional[str]=None) -> Variable:
     )
 
 
-Variables = Sequence[Variable]
+Variables = Dict[str, Variable]
 
 
 def to_vars(vals: Union[Iterable[Variable], Dict[str, Domain]]) -> Variables:
     if isinstance(vals, dict):
         vals = (to_var(name=key, domain=value) for key, value in vals.items())
-    return tuple(vals)
+    return {var.name: var for var in vals}
 
 
 @attr.s(frozen=True, auto_attribs=True)
 class Interface:
     """Input output interface of Multi-valued Decision Diagram."""
-    inputs: Variables = attr.ib(converter=to_vars)
+    _inputs: Variables = attr.ib(converter=to_vars)
     output: Variable = attr.ib(converter=to_var)
 
-    @inputs.validator
-    def check_unique(self, _, value):
-        names = [elem.name for elem in value]
+    def __attrs_post_init__(self):
+        names = list(self._inputs.keys()) + [self.output.name]
         if len(names) != len(set(names)):
             raise ValueError("All input names must be unique!")
+
+    @property
+    def inputs(self) -> Iterable[Variable]:
+        return [var for var in self._inputs.values()]
 
     def valid(self) -> BV.UnsignedBVExpr:
         """Circuit testing if input assignment is valid""" 
@@ -144,30 +147,27 @@ class Interface:
         if hasattr(bdd_or_aig, "aig"):
             bdd = to_bdd(bdd_or_aig)
 
-        bdd_vars = set(bdd.bdd.vars)
-        interface_vars = set()
-        for var in itertools.chain(self.inputs, [self.output]):
-            interface_vars |= set(var.bundle)
-
-        if bdd_vars != interface_vars:
-            diff = bdd_vars.symmetric_difference(interface_vars)
-            raise ValueError("Input AIG or BDD does not agree with this"
-                             f"interface.\n symmetric difference={diff}")
-
         return DecisionDiagram(interface=self, bdd=bdd)
-        
-    def order(self, inputs: Sequence[Union[Variable, str]]):
-        """Reorder underlying BDD to respect order seen in inputs.
-        
-        As a side effect, this function turns off reordering.
-        """
-        pass
 
 
 @attr.s(frozen=True, auto_attribs=True)
 class DecisionDiagram:
     interface: Interface
     bdd: BDD
+
+    def __attrs_post_init__(self):
+        """Check that bdd conforms to interface."""
+        bdd_vars = set(self.bdd.bdd.vars)
+        interface_vars = set()
+        
+        io = self.interface
+        for var in itertools.chain(io.inputs, [io.output]):
+            interface_vars |= set(var.bundle)
+
+        if bdd_vars != interface_vars:
+            diff = bdd_vars.symmetric_difference(interface_vars)
+            raise ValueError("Input AIG or BDD does not agree with this"
+                             f"interface.\n symmetric difference={diff}")
 
     def __call__(self, inputs):
         input_vars = self.interface.inputs
@@ -184,6 +184,7 @@ class DecisionDiagram:
             bundle = var.bundle
             encoded = BV.encode_int(bundle.size, encoded, signed=False)
             vals.update(bundle.blast(encoded))
+
         bdd = self.bdd.let(**vals)
         assert bdd.dag_size == 2, "Result should be single variable BDD."
 
@@ -195,25 +196,28 @@ class DecisionDiagram:
         assert 0 <= idx < output_var._encoding_size
         return output_var.decode(1 << idx)
 
+    def order(self, var_names: Sequence[str]):
+        """Reorder underlying BDD to respect order seen in inputs.
+        
+        As a side effect, this function turns off reordering.
+        """
+        io = self.interface
+        levels = {}
+        for name in var_names:
+            offset = len(levels)
+
+            var = io._inputs.get(name, io.output)
+            assert var.name == name, "Name doesn't match input or output."
+            
+            size = var._encoding_size
+            levels.update(var.bundle.blast(range(offset, offset + size)))
+
+        assert len(levels) == len(self.bdd.bdd.vars)
+        self.bdd.bdd.reorder(levels)
+        self.bdd.bdd.configure(reordering=False)
+
     def override(self, test: ValueLike, pos: DD) -> DD:
-        if isinstance(vals, tuple):  # Assuming partial assignment
-            inputs, output = vals
-
-            # Create predicate testing if value matches
-            expr = aiger.atom(True)
-            for var in self.inputs:
-                encoded = var.encode(vals[var.name])
-                assert var.valid({var.name: encoded})[0]
-
-                size = var.bundle.size  # Need encoding size.
-                test = BV.uatom(size, var.name) == BV.uatom(size, encoded)
-                expr &= aiger.BoolExpr(test.aig)
-
-            # Create BDD testing for vals.
-            vals = aiger_bdd.to_bdd(expr, manager=manager)
-
         pass
-
 
 DD = DecisionDiagram
 ValueLike = Union[Assignment, BDD]
