@@ -7,6 +7,7 @@ import uuid
 from functools import reduce
 from typing import Any, Callable, Dict, Generic, Hashable
 from typing import Iterable, Optional, Sequence, Tuple, Union
+from typing import FrozenSet
 
 import aiger
 import aiger_bv as BV
@@ -52,6 +53,8 @@ class Variable:
 
     def with_name(self, name) -> Variable:
         """Create a copy of this Variable with a new name."""
+        if self.name == name:
+            return self
         valid_circ = self.valid.aigbv['i', {self.name: name}]
         return attr.evolve(self, valid=BV.UnsignedBVExpr(valid_circ))
 
@@ -86,11 +89,10 @@ Domain = Union[Iterable[Any], Variable]
 
 def to_var(domain: Domain, name: Optional[str]=None) -> Variable:
     """Create BDD representation of a variable taking on values in `domain`."""
+    if isinstance(domain, Variable):
+        return domain if (name is None) else domain.with_name(name)
     if name is None:
         name = str(uuid.uuid1())  # Create unique name.
-
-    if isinstance(domain, Variable):
-        return domain.with_name(name)  # Just rename.
 
     domain = tuple(domain)
     tmp = BV.atom(len(domain), name, signed=True)
@@ -120,6 +122,7 @@ class Interface:
     """Input output interface of Multi-valued Decision Diagram."""
     _inputs: Variables = attr.ib(converter=to_vars)
     output: Variable = attr.ib(converter=to_var)
+    applied: FrozenSet[str] = frozenset()
 
     def __attrs_post_init__(self):
         names = list(self._inputs.keys()) + [self.output.name]
@@ -188,9 +191,12 @@ class DecisionDiagram:
 
         bdd = self.bdd.let(**vals)
 
-        if set(inputs) < {var.name for var in self.interface.inputs}:
+        io = self.interface
+        active_inputs = {var.name for var in io.inputs} - io.applied
+        if set(inputs) < active_inputs:
             assert bdd.dag_size >= 2
-            return attr.evolve(self, bdd=bdd)
+            io2 = attr.evolve(io, applied=io.applied | set(inputs))
+            return attr.evolve(self, bdd=bdd, interface=io2)
 
         assert bdd.dag_size == 2, "Result should be single variable BDD."
 

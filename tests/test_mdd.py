@@ -1,4 +1,3 @@
-import aiger_bdd
 import aiger_bv as BV
 
 import mdd
@@ -33,18 +32,17 @@ def test_interface():
     var1 = mdd.to_var(domain=["x", "y", "z"], name="myvar1")
     var2 = var1.with_name("myvar2")
     var3 = var1.with_name("myvar3")
-    var4 = var1.with_name("myvar4")
 
-    interface = mdd.Interface(inputs=[var1, var2, var3], output={'x', 'y', 'w'})
+    interface = mdd.Interface(inputs=[var1, var2, var3], output={1, 2, 3})
 
     # Check that interface can test domain.
     valid = interface.valid()
     assert valid({'myvar1': 0b100, 'myvar2': 0b100, 'myvar3': 0b100})[0]
     assert not valid({'myvar1': 0b000, 'myvar2': 0b100, 'myvar3': 0b100})[0]
 
-    func = interface.constantly("y")
+    func = interface.constantly(2)
     result = func({'myvar1': 'x', 'myvar2': 'x', 'myvar3': 'x'})
-    assert result == "y"
+    assert result == 2
 
 
 def test_lift():
@@ -130,3 +128,5 @@ def test_partial():
 
     func = interface.constantly(-1)
     func2 = func({'x': 2})
+    assert isinstance(func2, mdd.DecisionDiagram)
+    assert func2({'y': 6, 'z': 9}) == -1
