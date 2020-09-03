@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 import re
+import itertools
 import uuid
 from functools import reduce
 from typing import Any, Callable, Dict, Generic, Hashable
@@ -142,10 +143,17 @@ class Interface:
     def lift(self, bdd_or_aig, manager=None) -> DD:
         if hasattr(bdd_or_aig, "aig"):
             bdd = to_bdd(bdd_or_aig)
-        # Assuming BDD object.
-        # TODO: check that it's interface is compatible and extend if
-        # necessary. 
-        # TODO: Make sure no reordering!
+
+        bdd_vars = set(bdd.bdd.vars)
+        interface_vars = set()
+        for var in itertools.chain(self.inputs, [self.output]):
+            interface_vars |= set(var.bundle)
+
+        if bdd_vars != interface_vars:
+            diff = bdd_vars.symmetric_difference(interface_vars)
+            raise ValueError("Input AIG or BDD does not agree with this"
+                             f"interface.\n symmetric difference={diff}")
+
         return DecisionDiagram(interface=self, bdd=bdd)
         
     def order(self, inputs: Sequence[Union[Variable, str]]):

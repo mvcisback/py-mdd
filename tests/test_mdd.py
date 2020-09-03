@@ -71,9 +71,4 @@ def test_lift():
     func = interface.lift(expr)
 
     assert func({'x': 1, 'y': 6, 'z': 7}) == -1
-    assert func({'x': 2, 'y': 6, 'z': 7}) == 0
-
-
-    
-    
-    
+    assert func({'x': 2, 'y': 6, 'z': 7}) == 0    
