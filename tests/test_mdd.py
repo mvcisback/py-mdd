@@ -49,12 +49,12 @@ def test_lift():
     interface = mdd.Interface(
         inputs={
             "x": [1, 2, 3],
-            "y": [6, 4, 5], 
+            "y": [6, 4, 5],
             "z": [7, 9, 8],
-        }, 
+        },
         output=[-1, 0, 1]
     )
-    
+
     x, y, z = [var.expr() for var in interface.inputs]
     out = interface.output.expr()
 
@@ -69,16 +69,16 @@ def test_lift():
     func = interface.lift(expr)
 
     assert func({'x': 1, 'y': 6, 'z': 7}) == -1
-    assert func({'x': 2, 'y': 6, 'z': 7}) == 0    
+    assert func({'x': 2, 'y': 6, 'z': 7}) == 0
 
 
 def test_order():
     interface = mdd.Interface(
         inputs={
             "x": [1, 2, 3],
-            "y": [6, 5], 
+            "y": [6, 5],
             "z": [7, 9, 8],
-        }, 
+        },
         output=[-1, 0],
     )
     func = interface.constantly(-1)
@@ -102,9 +102,9 @@ def test_override():
     interface = mdd.Interface(
         inputs={
             "x": [1, 2, 3],
-            "y": [6, 5], 
+            "y": [6, 5],
             "z": [7, 9, 8],
-        }, 
+        },
         output=[-1, 0],
     )
     x = interface.var('x')
@@ -119,12 +119,11 @@ def test_partial():
     interface = mdd.Interface(
         inputs={
             "x": [1, 2, 3],
-            "y": [6, 5], 
+            "y": [6, 5],
             "z": [7, 9, 8],
-        }, 
+        },
         output=[-1, 0],
     )
-    x = interface.var('x')
 
     func = interface.constantly(-1)
     func2 = func.let({'x': 2})

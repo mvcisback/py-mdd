@@ -1,15 +1,13 @@
 from __future__ import annotations
 
-import math
 import re
 import itertools
 import uuid
 from functools import reduce
-from typing import Any, Callable, Dict, Generic, Hashable
+from typing import Any, Callable, Dict, Hashable
 from typing import Iterable, Optional, Sequence, Tuple, Union
 from typing import FrozenSet
 
-import aiger
 import aiger_bv as BV
 import aiger_bdd
 import attr
@@ -80,14 +78,14 @@ def pow2_exponent(val: int) -> int:
 
 
 def to_bdd(circ_or_expr, manager=None) -> BDD:
-    renamer = lambda _, x: x
-    return aiger_bdd.to_bdd(circ_or_expr, renamer=renamer, manager=manager)[0]
+    return aiger_bdd.to_bdd(
+        circ_or_expr, manager=manager, renamer=lambda _, x: x)[0]
 
 
 Domain = Union[Iterable[Any], Variable]
 
 
-def to_var(domain: Domain, name: Optional[str]=None) -> Variable:
+def to_var(domain: Domain, name: Optional[str] = None) -> Variable:
     """Create BDD representation of a variable taking on values in `domain`."""
     if isinstance(domain, Variable):
         return domain if (name is None) else domain.with_name(name)
@@ -134,7 +132,7 @@ class Interface:
         return [var for var in self._inputs.values()]
 
     def valid(self) -> BV.UnsignedBVExpr:
-        """Circuit testing if input assignment is valid""" 
+        """Circuit testing if input assignment is valid."""
         valid_tests = (var.valid for var in self.inputs)
         return reduce(lambda x, y: x & y, valid_tests)
 
@@ -167,7 +165,7 @@ class DecisionDiagram:
         """Check that bdd conforms to interface."""
         bdd_vars = set(self.bdd.bdd.vars)
         interface_vars = set()
-        
+
         io = self.interface
         for var in itertools.chain(io.inputs, [io.output]):
             interface_vars |= set(var.bundle)
@@ -193,10 +191,8 @@ class DecisionDiagram:
         bdd = self.bdd.let(**vals)
 
         io = self.interface
-        active_inputs = {var.name for var in io.inputs} - io.applied
         io2 = attr.evolve(io, applied=io.applied | set(inputs))
         return attr.evolve(self, bdd=bdd, interface=io2)
-        
 
     def __call__(self, inputs):
         """Evaluate MDD on inputs."""
@@ -213,7 +209,7 @@ class DecisionDiagram:
 
     def order(self, var_names: Sequence[str]):
         """Reorder underlying BDD to respect order seen in inputs.
-        
+
         As a side effect, this function turns off reordering.
         """
         io = self.interface
@@ -223,7 +219,7 @@ class DecisionDiagram:
 
             var = io._inputs.get(name, io.output)
             assert var.name == name, "Name doesn't match input or output."
-            
+
             size = var._encoding_size
             levels.update(var.bundle.blast(range(offset, offset + size)))
 
@@ -233,7 +229,7 @@ class DecisionDiagram:
 
     def override(self, test, value: Union[Any, MDD]) -> MDD:
         """Return MDD where `value if test else self`.
-        
+
         Args:
           test: Can be a BDD or and py-aiger compatible object.
           value: Either an element of co-domain or another compatible
@@ -255,4 +251,6 @@ class DecisionDiagram:
 MDD = DecisionDiagram
 
 
-__all__ = ["DecisionDiagram", "Interface", "Variable", "BDD", "to_var", "to_bdd"]
+__all__ = [
+    "DecisionDiagram", "Interface", "Variable", "BDD", "to_var", "to_bdd"
+]
