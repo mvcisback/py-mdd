@@ -28,7 +28,8 @@ def to_nx(func: DecisionDiagram,
     """
     # Force bdd to be ordered by MDD variables.
     if order is None:
-        order = tuple(var.name for var in func.inferface.inputs)
+        order = [var.name for var in func.interface.inputs]
+        order.append(func.interface.output.name)
     func.order(order)
 
     # DFS construction of graph.
@@ -39,19 +40,16 @@ def to_nx(func: DecisionDiagram,
         visited.add(curr)
         
         name, _ = name_index(curr.var)
-        var = func.inferface.var(name)
+        var = func.interface.var(name)
 
         # Use let to incrementally set variables in var.
-        curr2guard = transitions(var, curr)
-
-        for child, guard in transitions.items():
+        for child, guard in transitions(var, curr).items():
             if child not in visited:
                 stack.append(child)
                 graph.add_node(child, name=name_index(child.var)[0])
 
             graph.add_edge(curr, child, guard=guard)
     return graph
-        
 
 
 def transitions(var: Variable, curr: BDD, prev: BDD=None) -> Dict[BDD, BVExpr]:
@@ -69,10 +67,15 @@ def transitions(var: Variable, curr: BDD, prev: BDD=None) -> Dict[BDD, BVExpr]:
 
     # Recurse and combine guards using ite on current decision bit.
     _, idx = name_index(curr.var)
-    bit_test = curr.var.expr[idx]
+    bit_test = var.expr()[idx]
 
-    return fn.join_with(
-        lambda guards: BV.ite(bit_test, guards[0], guards[1]),
+    def merge_guards(guards):
+        if len(guards) == 1:
+            return guards
+        return BV.ite(bit_test, guards[0], guards[1])
+
+    return fn.merge_with(
+        merge_guards,
         transitions(var, curr.let(**{curr.var: True}), curr),
         transitions(var, curr.let(**{curr.var: False}), curr)
     )
