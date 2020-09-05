@@ -1,15 +1,22 @@
-from typing import Optional, Sequence
+from __future__ import annotations
 
+from typing import Dict, Optional, Sequence
+
+import aiger_bv as BV
+import funcy as fn
 import networkx as nx
+from aiger_bv.expr import UnsignedBVExpr as BVExpr
+from dd.autoref import BDD
 from networkx import DiGraph
 
 import mdd
 from mdd import DecisionDiagram, Variable
+from mdd.mdd import name_index
 
 
 def to_nx(func: DecisionDiagram, 
           symbolic_edges: bool=True,
-          order: Optional[Sequence, Variable]=None) -> DiGraph:
+          order: Optional[Sequence[str]]=None) -> DiGraph:
     """Returns networkx graph representation of `func` DecisionDiagram.
 
     Nodes represent decision variables given in order.
@@ -19,5 +26,56 @@ def to_nx(func: DecisionDiagram,
     Else:
       Edges are annotated by a subset of the variable's domain.
     """
+    # Force bdd to be ordered by MDD variables.
+    if order is None:
+        order = tuple(var.name for var in func.inferface.inputs)
+    func.order(order)
+
+    # DFS construction of graph.
     graph = nx.DiGraph()
-    root = func.bdd
+    stack, visited = [func.bdd], set()
+    while stack:
+        curr = stack.pop()
+        visited.add(curr)
+        
+        name, _ = name_index(curr.var)
+        var = func.inferface.var(name)
+
+        # Use let to incrementally set variables in var.
+        curr2guard = transitions(var, curr)
+
+        for child, guard in transitions.items():
+            if child not in visited:
+                stack.append(child)
+                graph.add_node(child, name=name_index(child.var)[0])
+
+            graph.add_edge(curr, child, guard=guard)
+    return graph
+        
+
+
+def transitions(var: Variable, curr: BDD, prev: BDD=None) -> Dict[BDD, BVExpr]:
+    if curr.var is None:
+        return {}
+
+    if prev is None:
+        prev = curr
+
+    name, idx = name_index(prev.var)
+    assert name == var.name
+
+    if not curr.var.startswith(name):
+        return { curr: var.expr()[idx] }
+
+    # Recurse and combine guards using ite on current decision bit.
+    _, idx = name_index(curr.var)
+    bit_test = curr.var.expr[idx]
+
+    return fn.join_with(
+        lambda guards: BV.ite(bit_test, guards[0], guards[1]),
+        transitions(var, curr.let(**{curr.var: True}), curr),
+        transitions(var, curr.let(**{curr.var: False}), curr)
+    )
+
+
+__all__ = ["to_nx"]

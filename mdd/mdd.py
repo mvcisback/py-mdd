@@ -22,6 +22,13 @@ Assignment = Tuple[Dict[str, Any], Any]
 INDEX_SPLITTER = re.compile(r"(.*)\[(.*)\]")
 
 
+def name_index(var: str) -> Tuple[str, int]:
+    match = INDEX_SPLITTER.match(var)
+    assert match is not None
+    name, idx_str = match.groups()
+    return name, int(idx_str)
+
+
 @attr.s(frozen=True, auto_attribs=True)
 class Variable:
     """BDD representation of a multi-valued variable."""
@@ -222,10 +229,8 @@ class DecisionDiagram:
         assert bdd.dag_size == 2, "Result should be single variable BDD."
 
         # Return which decision this was.
-        match = INDEX_SPLITTER.match(bdd.var)
-        assert match is not None
-        name, idx_str = match.groups()
-        idx = int(idx_str)
+        name, idx = name_index(bdd.var)
+
         output_var = self.interface.output
         assert name == output_var.name
         assert 0 <= idx < output_var._encoding_size
