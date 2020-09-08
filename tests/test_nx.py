@@ -22,7 +22,7 @@ def test_to_nx():
     assert len(graph) == len(graph2)
     assert graph2.edges
 
-    guards = (data['guards'] for *_, data in graph2.edges(data=True))
+    guards = (data['label'] for *_, data in graph2.edges(data=True))
     edge_vals = set(map(frozenset, guards))
     assert edge_vals == {
         frozenset({'a'}),

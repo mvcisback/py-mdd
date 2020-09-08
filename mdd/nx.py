@@ -20,14 +20,14 @@ def to_nx(func: DecisionDiagram,
     """Returns networkx graph representation of `func` DecisionDiagram.
 
     Nodes represent decision variables given in order. The variable is
-    accessable using the 'name' key.
+    accessable using the 'label' key.
 
     If `symbolic_edges`:
       Edges are annotated by py-aiger guards over variable encoding.
     Else:
       Edges are annotated by a subset of the variable's domain.
 
-    The inputs the edge represents are accessable via the 'guards' key.
+    The inputs the edge represents are accessable via the 'label' key.
     """
     # Force bdd to be ordered by MDD variables.
     if order is None:
@@ -44,7 +44,7 @@ def to_nx(func: DecisionDiagram,
             continue
 
         visited.add(curr)
-        graph.add_node(curr, name=name_index(curr.var)[0])
+        graph.add_node(curr, label=name_index(curr.var)[0])
 
         name, idx = name_index(curr.var)
         var = func.interface.var(name)
@@ -54,14 +54,14 @@ def to_nx(func: DecisionDiagram,
             # Relabel name with output if leaf.
             output = func.interface.output
             assert name == output.name
-            graph.nodes[curr]['name'] = output.decode(1 << idx)
+            graph.nodes[curr]['label'] = output.decode(1 << idx)
             continue
 
         # Use let to incrementally set variables in var.
         for child, guard in children:
             guard &= var.valid
             stack.append(child)
-            graph.add_edge(curr, child, guards=guard)
+            graph.add_edge(curr, child, label=guard)
 
     # Decouple from BDD.
     graph = nx.convert_node_labels_to_integers(graph)
@@ -70,11 +70,11 @@ def to_nx(func: DecisionDiagram,
 
 def concrete_graph(func: DecisionDiagram, graph: DiGraph) -> DiGraph:
     for *_, data in graph.edges(data=True):
-        guard = data['guards']
+        guard = data['label']
         assert isinstance(guard, BVExpr)
         assert len(guard.inputs) == 1
         var = func.interface.var(fn.first(guard.inputs))
-        data['guards'] = set(solutions(var, guard))
+        data['label'] = set(solutions(var, guard))
     return graph
 
 
