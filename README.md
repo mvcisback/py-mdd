@@ -170,10 +170,44 @@ Diagram. There are five main ways to create a `DecisionDiagram`:
    func2 = func.override(test=test, value=1)
    assert func2({'x': 1, 'y': 6, 'z': True}) == 1
    ```
-   
-
 
 ## BDD Encoding Details
 
+The `py-mdd` library uses a Binary Decision Diagram to represent a
+multi-valued function. The encoding slighly differs from the standard
+reduction [^1] from mdds to bdds by assuming the following:
+
+1. If a variable encoding is invalid, then the bdd maps it to `0`.
+1. The output is 1-hot encoded, i.e., there is a variable for each
+   outcome.
+1. If a `bdd` has all input variables fixed to a valid assignment, the
+   resulting `bdd` depends on exactly one output varible, which then
+   determines the output.
+
+Any bdd that conforms to this encoding can be wrapped up by an
+approriate `Interface`.
+
+## Ordering `DecisionDiagram`s
+
+The underlying BDD can be reordered to respect variable ordering by
+providing a complete list of variable names to the `order` method.
+
+```python
+func.order(['x', 'y', 'z', func.output.name])
+```
+
 ## Converting to Directed Graph (networkx)
 
+If the `networkx` python package is installed, the one can export
+a `DecisionDiagram` as a directed graph:
+
+```python
+from mdd.nx import to_nx
+
+graph = to_nx(func)  # Has BitVector expressions on edges to represent guards.
+
+graph2 = to_nx(func, symbolic_edges=False)  # Has explicit sets of values on edges to represent guards.
+```
+
+
+[^1]: Srinivasan, Arvind, et al. "Algorithms for discrete function manipulation." 1990 IEEE international conference on computer-aided design. IEEE Computer Society, 1990.
