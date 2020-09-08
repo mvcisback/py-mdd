@@ -26,7 +26,7 @@ run:
 
 # Usage
 
-For the impatient, here are two basic usage examples:
+For the impatient, here is a basic usage example:
 
 ```python
 import mdd
@@ -41,13 +41,14 @@ interface = mdd.Interface(
 )
 func = interface.constantly(-1)
 assert func({'x': 1, 'y': 'w', 'z': 8}) == -1
+
+# Can access underlying BDD from `dd` library.
+# Note: This BDD encodes both the function's output
+#       *and* domain (valid inputs).
+assert func.bdd.dag_size == 33
 ```
 
 ## Variables, Interfaces, and Encodings
-
-
-func.override()
-
 
 The `mdd` api centers around three objects:
 
@@ -55,20 +56,18 @@ The `mdd` api centers around three objects:
    from a finite set described by an aiger circuit.
 1. `Interface`: Description of inputs and outputs of a Multi-valued Decision Diagram.
 1. `DecisionDiagram`: Representation of a Multi-valued Decision Diagram that conforms
-   to an interface.
-
-This object is a wrapper around a Binary Decision Diagram object (from
+   to an interface. This object is a wrapper around a Binary Decision Diagram object (from
 [dd](https://github.com/tulip-control/dd)).
 
-By default, variables use one-hot encoding, but all input variables
-can use arbitrary encodings.
+By default, variables use one-hot encoding, but all **input**
+variables can use arbitrary encodings by defining a bit-vector
+expression describing **valid** inputs and a encode/decoder pair from
+`int`s to the variable's domain.
+
 
 ```python
-# One hot encoded.
+# One hot encoded by default.
 var1 = mdd.to_var(domain=["x", "y", "z"], name="myvar1")
-
-# Copied from another variable.
-var2 = var1.with_name("myvar2")
 
 # Hand crafted encoding using `py-aiger`.
 
@@ -78,19 +77,103 @@ import aiger_bv
 bvexpr = aiger_bv.uatom(2, 'myvar3')
 
 domain = ('a', 'b', 'c')
-var3 = mdd.Variable(
+var2 = mdd.Variable(
      encode=domain.index,        # Any -> int
      decode=domain.__getitem__,  # int -> Any
      valid=bvexpr < 4,           # 0b11 is invalid!
 )
 
-interface = mdd.Interface(inputs=[var1, var2, var3], output={1, 2, 3})
+# Can create new variable using same encoding, but different name.
+var3 = var2.with_name("myvar3")
+
+var4 = mdd.to_var(domain=[-1, 0, 1], name='output')
 ```
 
-## MDD Manipulations
+A useful feature of variables is that they can generate an `aiger_bv`
+BitVector object to describe circuits in terms of a variable.
 
-TODO
+```python
+a_int = var2.encode('a')
+y_int = var1.encode('y')
 
-## BDD <-> MDD
+# BitVector Expression testing if var2 is 'a' and var1 is 'y'.
+expr = (var2.expr() == a_int) & (var1.expr() == y_int)
+```
 
-TODO
+Given these variables, we can define an input/output interface.
+
+```python
+# All variables must have distinct names.
+interface = mdd.Interface(inputs=[var1, var2, var3], output=var4)
+```
+
+Further, as the first example showed, if the default encoding is fine,
+then we can simply pass a dictionary inplace of inputs and/or a
+iterable in place of the output. In this case, a 1-hot encoding will
+be created using the order of the variables.
+
+```python
+interface = mdd.Interface(
+    inputs={
+        "x": [1, 2, 3],      # These are
+        "y": [6, 'w'],       # 1-hot
+        "z": [7, True, 8],   # Encoded.
+    }, 
+    output=[-1, 0, 1],       # uuid based output name.
+)
+```
+
+Finally, given an interface we can create a Multi-valued Decision
+Diagram. There are five main ways to create a `DecisionDiagram`:
+
+1. Given an interface, create a constant function:
+   ```python
+   func = interface.constantly(1)
+   ```
+
+2. Wrap an `py-aiger` compatible object:
+   ```python
+   import aiger_bv as BV
+    
+   x = interface.var('x')  # Access 'x' variable.
+   out = interface.output  # Access output variable.
+
+   expr = BV.ite(
+       x.expr() == x.encode(2),       # Test.
+       out.expr() == out.encode(0),   # True branch.
+       out.expr() == out.encode(-1),  # False branch.
+   )
+   func = interface.lift(expr)
+   assert func({'x': 2, 'y': 6, 'z': True}) == 0
+   assert func({'x': 1, 'y': 6, 'z': True}) == -1
+   ```
+
+3. Wrap an existing Binary Decision Diagram:
+   ```python
+   bdd = mdd.to_bdd(expr)      # Convert `aiger` expression to bdd.
+   func = interface.lift(bdd)  # bdd type comes from `dd` library.
+   assert func({'x': 2, 'y': 6, 'z': True}) == 0
+   assert func({'x': 1, 'y': 6, 'z': True}) == -1
+   ```
+
+4. Partially Evaluate an existing `DecisionDiagram`:
+   ```python
+   constantly_0 = func.let({'x': 2})
+   assert func({'y': 6, 'z': True}) == 0
+   ```
+
+5. Override an existing `DecisionDiagram` given a predicate:
+   ```python
+   # Can be a BDD or and py-aiger compatible object.
+   test = x.expr() == x.encode(1)
+   # If x = 1, then return 1, otherwise return using func.
+   func2 = func.override(test=test, value=1)
+   assert func2({'x': 1, 'y': 6, 'z': True}) == 1
+   ```
+   
+
+
+## BDD Encoding Details
+
+## Converting to Directed Graph (networkx)
+

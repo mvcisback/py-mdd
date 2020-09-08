@@ -19,12 +19,15 @@ def to_nx(func: DecisionDiagram,
           order: Optional[Sequence[str]] = None) -> DiGraph:
     """Returns networkx graph representation of `func` DecisionDiagram.
 
-    Nodes represent decision variables given in order.
+    Nodes represent decision variables given in order. The variable is
+    accessable using the 'name' key.
 
     If `symbolic_edges`:
       Edges are annotated by py-aiger guards over variable encoding.
     Else:
       Edges are annotated by a subset of the variable's domain.
+
+    The inputs the edge represents are accessable via the 'guards' key.
     """
     # Force bdd to be ordered by MDD variables.
     if order is None:
