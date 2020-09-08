@@ -111,12 +111,12 @@ def transitions(var: Variable,
 
     # Recurse and combine guards using ite on current decision bit.
     _, idx = name_index(curr.var)
-    bit_test = var.expr()[idx]
+    bit = var.expr()[idx]
 
     return fn.merge_with(
         lambda guards: reduce(lambda g1, g2: g1 | g2, guards),
-        transitions(var, curr.let(**{curr.var: True}), curr, path & bit_test),
-        transitions(var, curr.let(**{curr.var: False}), curr, path & ~bit_test),
+        transitions(var, curr.let(**{curr.var: True}), curr, path & bit),
+        transitions(var, curr.let(**{curr.var: False}), curr, path & ~bit),
     )
 
 
