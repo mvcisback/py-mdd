@@ -9,6 +9,8 @@ Multi-valued Decision Diagrams.
 [![PyPI version](https://badge.fury.io/py/mdd.svg)](https://badge.fury.io/py/mdd)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+## About
+
 Multi-valued Decision Diagrams (MDD)  are a way to represent discrete function: 
 
     f : A₁ × A₂ × … × Aₙ → B.
@@ -26,6 +28,8 @@ with possible outputs `f(x, y) ∈ {-1, 0, 1}`, then the following diagram repre
 <figure style="display: flex; justify-content: center; flex-direction: row">
 <img src="assets/example_mdd.png"
 </figure>
+    
+This library provides abstractions to easily create and manipulate MDDs.
 
 # Installation
 
