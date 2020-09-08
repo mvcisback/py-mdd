@@ -15,7 +15,15 @@ Multi-valued Decision Diagrams (MDD)  are a way to represent discrete function:
 
 Conceptually, a MDD for `f` can be thought of as a compressed decision tree (in the form of a directed acyclc graph).
 
-<figure>
+For example, if we have a function over two variables,
+
+    x ∈ {1,2,3,4,5}, y ∈ {'a','b'}
+
+with possible outputs `f(x, y) ∈ {-1, 0, 1}`, then the following diagram represents the function:
+
+    f(x, y) = 1 if (x ≡ 1 and y ≡ 'a') else 0
+
+<figure style="display: flex; justify-content: center; flex-direction: row">
 <img src="assets/example_mdd.png"
 </figure>
 
