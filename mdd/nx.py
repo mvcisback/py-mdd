@@ -22,7 +22,7 @@ def to_nx(func: DecisionDiagram,
     Nodes represent decision variables given in order.
 
     If `symbolic_edges`:
-      Edges are annotated by py-aiger guard over variable encoding.
+      Edges are annotated by py-aiger guards over variable encoding.
     Else:
       Edges are annotated by a subset of the variable's domain.
     """
@@ -58,7 +58,7 @@ def to_nx(func: DecisionDiagram,
         for child, guard in children:
             guard &= var.valid
             stack.append(child)
-            graph.add_edge(curr, child, guard=guard)
+            graph.add_edge(curr, child, guards=guard)
 
     # Decouple from BDD.
     graph = nx.convert_node_labels_to_integers(graph)
@@ -67,11 +67,11 @@ def to_nx(func: DecisionDiagram,
 
 def concrete_graph(func: DecisionDiagram, graph: DiGraph) -> DiGraph:
     for *_, data in graph.edges(data=True):
-        guard = data['guard']
+        guard = data['guards']
         assert isinstance(guard, BVExpr)
         assert len(guard.inputs) == 1
         var = func.interface.var(fn.first(guard.inputs))
-        data['guard'] = set(solutions(var, guard))
+        data['guards'] = set(solutions(var, guard))
     return graph
 
 
