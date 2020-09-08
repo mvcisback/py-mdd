@@ -198,8 +198,15 @@ func.order(['x', 'y', 'z', func.output.name])
 
 ## Converting to Directed Graph (networkx)
 
-If the `networkx` python package is installed, the one can export
-a `DecisionDiagram` as a directed graph:
+If the `networkx` python package is installed:
+
+`$ pip install networkx`
+
+or the `nx` option is added when installing `py-mdd`:
+
+`$ pip install mdd[nx]`
+
+then one can export a `DecisionDiagram` as a directed graph:
 
 ```python
 from mdd.nx import to_nx
