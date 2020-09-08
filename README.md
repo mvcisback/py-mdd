@@ -1,7 +1,7 @@
 # Py-MDD
 
 Python abstraction around Binary Decision Diagrams to implement
-Multivalued Decision Diagrams.
+Multi-valued Decision Diagrams.
 
 [![Build Status](https://cloud.drone.io/api/badges/mvcisback/py-mdd/status.svg)](https://cloud.drone.io/mvcisback/py-mdd)
 [![docs badge](https://img.shields.io/badge/docs-docs-black)](https://mjvc.me/py-mdd)
@@ -9,6 +9,15 @@ Multivalued Decision Diagrams.
 [![PyPI version](https://badge.fury.io/py/mdd.svg)](https://badge.fury.io/py/mdd)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+Multi-valued Decision Diagrams (MDD)  are a way to represent discrete function: 
+
+    f : A₁ × A₂ × … × Aₙ → B.
+
+Conceptually, a MDD for `f` can be thought of as a compressed decision tree (in the form of a directed acyclc graph).
+
+<figure>
+<img src="assets/example_mdd.png"
+</figure>
 
 # Installation
 
