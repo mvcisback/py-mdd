@@ -50,7 +50,7 @@ assert func.bdd.dag_size == 33
 
 If 33 seems very large to you, this is just a constant function after
 all, note that as the following sections illustrate, its easy to
-implement alternative encodings which can be much more compact. ([2])[#note2]
+implement alternative encodings which can be much more compact. <a href="#note2">[0]</a>
 
 ## Variables, Interfaces, and Encodings
 
@@ -179,7 +179,7 @@ Diagram. There are five main ways to create a `DecisionDiagram`:
 
 The `py-mdd` library uses a Binary Decision Diagram to represent a
 multi-valued function. The encoding slighly differs from the standard
-reduction ([1])(#note1) from mdds to bdds by assuming the following:
+reduction <a href="#note1">[1]</a> from mdds to bdds by assuming the following:
 
 1. If a variable encoding is invalid, then the bdd maps it to `0`.
 1. The output is 1-hot encoded, i.e., there is a variable for each
@@ -221,6 +221,7 @@ graph2 = to_nx(func, symbolic_edges=False)  # Has explicit sets of values on edg
 ```
 
 
+<strong id="note2">[0]:</strong> To get a sense for how much overhead is introduced, consider the corresponding Zero Suppressed Decision Diagram (ZDD) of a 1-hot encoding. A classic result (see Art of Computer Programming vol 4a) is the ZDD size bounds the BDD size via O(#variables*|size of ZDD|).
+
 <strong id="note1">[1]:</strong> Srinivasan, Arvind, et al. "Algorithms for discrete function manipulation." 1990 IEEE international conference on computer-aided design. IEEE Computer Society, 1990.
 
-<strong id="node2">[2]:</strong> To get a sense for how much overhead is introduced, consider the corresponding Zero Suppressed Decision Diagram (ZDD) of a 1-hot encoding. A classic result (see Art of Computer Programming vol 4a) is the ZDD size bounds the BDD size via O(#variables*|size of ZDD|).
