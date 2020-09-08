@@ -9,6 +9,21 @@ Multi-valued Decision Diagrams.
 [![PyPI version](https://badge.fury.io/py/mdd.svg)](https://badge.fury.io/py/mdd)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+<!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
+**Table of Contents**
+
+- [Py-MDD](#py-mdd)
+    - [About](#about)
+- [Installation](#installation)
+- [Usage](#usage)
+    - [Variables, Interfaces, and Encodings](#variables-interfaces-and-encodings)
+    - [BDD Encoding Details](#bdd-encoding-details)
+    - [Ordering `DecisionDiagram`s](#ordering-decisiondiagrams)
+    - [Converting to Directed Graph (networkx)](#converting-to-directed-graph-networkx)
+
+<!-- markdown-toc end -->
+
+
 ## About
 
 Multi-valued Decision Diagrams (MDD)  are a way to represent discrete function: 
