@@ -17,3 +17,7 @@ def test_to_nx():
 
     graph = to_nx(func)
     assert len(graph) == 4
+
+    graph2 = to_nx(func, symbolic_edges=False)
+    assert len(graph) == len(graph2)
+    assert graph2.edges
