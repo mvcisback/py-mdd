@@ -48,14 +48,18 @@ assert func({'x': 1, 'y': 'w', 'z': 8}) == -1
 assert func.bdd.dag_size == 33
 ```
 
+If 33 seems very large to you, this is just a constant function after
+all, note that as the following sections illustrate, its easy to
+implement alternative encodings which can be much more compact. [^2]
+
 ## Variables, Interfaces, and Encodings
 
 The `mdd` api centers around three objects:
 
-1. `Variable`: Representation of a named variable taking on values in
+1. [`Variable`](https://mjvc.me/py-mdd/mdd.html#mdd.mdd.Variable): Representation of a named variable taking on values in
    from a finite set described by an aiger circuit.
-1. `Interface`: Description of inputs and outputs of a Multi-valued Decision Diagram.
-1. `DecisionDiagram`: Representation of a Multi-valued Decision Diagram that conforms
+1. [`Interface`](https://mjvc.me/py-mdd/mdd.html#mdd.mdd.Interface): Description of inputs and outputs of a Multi-valued Decision Diagram.
+1. [`DecisionDiagram`](https://mjvc.me/py-mdd/mdd.html#mdd.mdd.DecisionDiagram): Representation of a Multi-valued Decision Diagram that conforms
    to an interface. This object is a wrapper around a Binary Decision Diagram object (from
 [dd](https://github.com/tulip-control/dd)).
 
@@ -218,3 +222,6 @@ graph2 = to_nx(func, symbolic_edges=False)  # Has explicit sets of values on edg
 
 
 [^1]: Srinivasan, Arvind, et al. "Algorithms for discrete function manipulation." 1990 IEEE international conference on computer-aided design. IEEE Computer Society, 1990.
+[^2]: To get a sense for how much overhead is introduced, consider the corresponding Zero Suppressed Decision Diagram (ZDD) of a 1-hot encoding. A classic result (see Art of Computer Programming vol 4a) is the ZDD size bounds the BDD size via O(#variables*|size of ZDD|).
+
+ is very small, you can show that the BDD
