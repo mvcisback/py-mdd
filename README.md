@@ -12,8 +12,7 @@ Multi-valued Decision Diagrams.
 <!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
 **Table of Contents**
 
-- [Py-MDD](#py-mdd)
-    - [About](#about)
+- [About](#about)
 - [Installation](#installation)
 - [Usage](#usage)
     - [Variables, Interfaces, and Encodings](#variables-interfaces-and-encodings)
