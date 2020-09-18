@@ -236,11 +236,18 @@ class DecisionDiagram:
         assert 0 <= idx < output_var._encoding_size
         return output_var.decode(1 << idx)
 
-    def order(self, var_names: Sequence[str]):
-        """Reorder underlying BDD to respect order seen in inputs.
+    def order(self, var_names: Optional[Sequence[str]] = None):
+        """Reorder underlying BDD to respect order seen in var_names.
+
+        If var_names is None, then order is set `self.interface.inputs`'s
+        order followed by `self.interface.output`.
 
         As a side effect, this function turns off reordering.
         """
+        if var_names is None:
+            var_names = [var.name for var in self.interface.inputs]
+            var_names.append(self.interface.output.name)
+
         io = self.interface
         levels: Dict[str, int] = {}
         for name in var_names:

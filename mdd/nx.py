@@ -4,10 +4,11 @@ from functools import reduce
 from typing import Any, Dict, Optional, Sequence
 
 import aiger_bv as BV
+import bdd2dfa
 import funcy as fn
 import networkx as nx
 from aiger_bv.expr import UnsignedBVExpr as BVExpr
-from dd.autoref import BDD
+from bdd2dfa.b2d import BNode
 from networkx import DiGraph
 
 from mdd import DecisionDiagram, Variable
@@ -20,7 +21,7 @@ def to_nx(func: DecisionDiagram,
     """Returns networkx graph representation of `func` DecisionDiagram.
 
     Nodes represent decision variables given in order. The variable is
-    accessable using the 'label' key.
+    accessible using the 'label' key.
 
     If `symbolic_edges`:
       Edges are annotated by py-aiger guards over variable encoding.
@@ -30,23 +31,23 @@ def to_nx(func: DecisionDiagram,
     The inputs the edge represents are accessable via the 'label' key.
     """
     # Force bdd to be ordered by MDD variables.
-    if order is None:
-        order = [var.name for var in func.interface.inputs]
-        order.append(func.interface.output.name)
     func.order(order)
+
+    # Use bit-dfa to hide some of dd's internal details.
+    start = bdd2dfa.to_dfa(func.bdd, qdd=False).start
 
     # DFS construction of graph.
     graph = nx.DiGraph()
-    stack, visited = [func.bdd], set()
+    stack, visited = [start], set()
     while stack:
         curr = stack.pop()
         if curr in visited:
             continue
 
         visited.add(curr)
-        graph.add_node(curr, label=name_index(curr.var)[0])
+        graph.add_node(curr, label=name_index(curr.node.var)[0])
 
-        name, idx = name_index(curr.var)
+        name, idx = name_index(curr.node.var)
         var = func.interface.var(name)
         children = transitions(var, curr).items()
 
@@ -93,11 +94,11 @@ def solutions(var: Variable, guard: BVExpr) -> Any:
 
 
 def transitions(var: Variable,
-                curr: BDD,
-                prev: Optional[BDD] = None,
-                path: BVExpr = BV.uatom(1, 1)) -> Dict[BDD, BVExpr]:
+                curr: BNode,
+                prev: Optional[BNode] = None,
+                path: BVExpr = BV.uatom(1, 1)) -> Dict[BNode, BVExpr]:
     """Recursively compute transition to next variable."""
-    if curr.var is None:
+    if curr.node.var is None:
         return {}
 
     if prev is None:
@@ -106,20 +107,20 @@ def transitions(var: Variable,
     if path is None:
         path = BV.uatom(1, 1)
 
-    name, idx = name_index(prev.var)
+    name, idx = name_index(prev.node.var)
     assert name == var.name
 
-    if not curr.var.startswith(name):
+    if not curr.node.var.startswith(name):
         return {curr: path}
 
     # Recurse and combine guards using ite on current decision bit.
-    _, idx = name_index(curr.var)
+    _, idx = name_index(curr.node.var)
     bit = var.expr()[idx]
 
     return fn.merge_with(
         lambda guards: reduce(lambda g1, g2: g1 | g2, guards),
-        transitions(var, curr.let(**{curr.var: True}), curr, path & bit),
-        transitions(var, curr.let(**{curr.var: False}), curr, path & ~bit),
+        transitions(var, curr.transition(True), curr, path & bit),
+        transitions(var, curr.transition(False), curr, path & ~bit),
     )
 
 
