@@ -142,11 +142,22 @@ class Interface:
     _inputs: Variables = attr.ib(converter=to_vars)
     output: Variable = attr.ib(converter=to_var)
     applied: FrozenSet[str] = frozenset()
+    _valid: Optional[UnsignedBVExpr] = attr.ib(default=None)
+
+    @_valid.validator
+    def check_interface(self, _, value):
+        if value is None:
+            return
+        if not (value.inputs <= set(self._inputs.keys())):
+            raise ValueError("valid circ incompatible with interface.")
 
     def __attrs_post_init__(self):
-        names = list(self._inputs.keys()) + [self.output.name]
+        names = self._names()
         if len(names) != len(set(names)):
             raise ValueError("All input names must be unique!")
+
+    def _names(self):
+        return list(self._inputs.keys()) + [self.output.name]
 
     @property
     def inputs(self) -> Iterable[Variable]:
@@ -155,6 +166,8 @@ class Interface:
     def valid(self) -> BV.UnsignedBVExpr:
         """Circuit testing if input assignment is valid."""
         valid_tests = (var.valid for var in self.inputs)
+        if self._valid is not None:
+            valid_tests = itertools.chain([self._valid], valid_tests)
         return reduce(lambda x, y: x & y, valid_tests)
 
     def constantly(self, output: Any, manager: Optional[BDD] = None) -> MDD:
@@ -162,8 +175,8 @@ class Interface:
         encoded = self.output.encode(output)
         assert self.output.valid({self.output.name: encoded})[0]
 
-        # Create BDD that only depends on hot variable in encoded.
-        index = pow2_exponent(encoded)
+        # Create BDD that tests valid inputs + value of hot index.
+        index = pow2_exponent(encoded)  # hot index.
         expr = self.output.expr()[index] & self.valid()
         bdd = to_bdd(expr, manager=manager)
         return DecisionDiagram(interface=self, bdd=bdd)
