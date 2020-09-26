@@ -232,6 +232,7 @@ class DecisionDiagram:
             vals.update(bundle.blast(encoded))
 
         bdd = self.bdd.let(**vals)
+        assert bdd.bdd.false != bdd, "Inputs violated self.interface.valid."
 
         io = self.interface
         io2 = attr.evolve(io, applied=io.applied | set(inputs))
