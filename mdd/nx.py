@@ -60,7 +60,6 @@ def to_nx(func: DecisionDiagram,
 
         # Use let to incrementally set variables in var.
         for child, guard in children:
-            guard &= var.valid
             stack.append(child)
             graph.add_edge(curr, child, label=guard)
 
@@ -93,35 +92,32 @@ def solutions(var: Variable, guard: BVExpr) -> Any:
         yield var.decode(as_int)
 
 
-def transitions(var: Variable,
-                curr: BNode,
-                prev: Optional[BNode] = None,
-                path: BVExpr = BV.uatom(1, 1)) -> Dict[BNode, BVExpr]:
+def merge_guards(guards):
+    return reduce(lambda x, y: x | y, guards)
+
+
+def transitions(var: Variable, curr: BNode) -> Dict[BNode, BVExpr]:
     """Recursively compute transition to next variable."""
     if curr.node.var is None:
         return {}
 
-    if prev is None:
-        prev = curr
-
-    if path is None:
-        path = BV.uatom(1, 1)
-
-    name, idx = name_index(prev.node.var)
-    assert name == var.name
-
-    if not curr.node.var.startswith(name):
-        return {curr: path}
+    if not curr.node.var.startswith(var.name):
+        return {curr: BV.uatom(1, 1)}
 
     # Recurse and combine guards using ite on current decision bit.
     _, idx = name_index(curr.node.var)
     bit = var.expr()[idx]
 
-    return fn.merge_with(
-        lambda guards: reduce(lambda g1, g2: g1 | g2, guards),
-        transitions(var, curr.transition(True), curr, path & bit),
-        transitions(var, curr.transition(False), curr, path & ~bit),
-    )
+    factors = {
+        0: transitions(var, curr.transition(False)),
+        1: transitions(var, curr.transition(True)),
+    }
+    for decision, factor in factors.items():
+        test = bit if decision else ~bit
+        for node in factor:
+            factor[node] = test & factor[node]
+
+    return fn.join_with(merge_guards, factors.values())
 
 
 __all__ = ["to_nx"]

@@ -188,6 +188,7 @@ class Interface:
         """
         if hasattr(bdd_or_aig, "aig"):
             bdd = to_bdd(bdd_or_aig)
+        bdd &= to_bdd(self.valid(), manager=bdd.bdd)
 
         return DecisionDiagram(interface=self, bdd=bdd)
 

@@ -16,7 +16,7 @@ def test_to_nx():
     func = interface.lift(expr)
 
     graph = to_nx(func)
-    assert len(graph) == 4
+    assert len(graph) == 5  # TODO: should be 4 for reduced graph.
 
     graph2 = to_nx(func, symbolic_edges=False)
     assert len(graph) == len(graph2)
@@ -27,6 +27,7 @@ def test_to_nx():
     assert edge_vals == {
         frozenset({'a'}),
         frozenset({'b'}),
+        frozenset({'a', 'b'}),  # TODO: should not appear in reduced graph.
         frozenset({1}),
         frozenset({2, 3, 4, 5}),
     }

@@ -245,7 +245,10 @@ or the `nx` option is added when installing `py-mdd`:
 
 `$ pip install mdd[nx]`
 
-then one can export a `DecisionDiagram` as a directed graph:
+then one can export a `DecisionDiagram` as a directed graph.
+
+**note:** for now, this graph is only partially reduced. In the future,
+the plan is to guarantee that the exported DAG is fulled reduced.
 
 ```python
 from mdd.nx import to_nx
@@ -254,6 +257,7 @@ graph = to_nx(func)  # Has BitVector expressions on edges to represent guards.
 
 graph2 = to_nx(func, symbolic_edges=False)  # Has explicit sets of values on edges to represent guards.
 ```
+
 
 
 <strong id="note2">[0]:</strong> To get a sense for how much overhead is introduced, consider the corresponding Zero Suppressed Decision Diagram (ZDD) of a 1-hot encoding. A classic result (see Art of Computer Programming vol 4a) is the ZDD size bounds the BDD size via O(#variables*|size of ZDD|).
