@@ -89,9 +89,15 @@ def pow2_exponent(val: int) -> int:
     return count
 
 
-def to_bdd(circ_or_expr, manager: Optional[BDD] = None) -> BDD:
+def id_renamer(_, x):
+    return x
+
+
+def to_bdd(circ_or_expr, manager: Optional[BDD] = None, levels=None) -> BDD:
     """Convert py-aiger compatible object into a BDD."""
-    return aiger_bdd.to_bdd(circ_or_expr, manager=manager, renamer=lambda _, x: x)[0]
+    return aiger_bdd.to_bdd(
+        circ_or_expr, manager=manager, renamer=id_renamer, levels=levels,
+    )[0]
 
 
 Domain = Union[Iterable[Any], Variable]
@@ -181,14 +187,31 @@ class Interface:
         bdd = to_bdd(expr, manager=manager)
         return DecisionDiagram(interface=self, bdd=bdd)
 
-    def lift(self, bdd_or_aig, manager: None = None) -> MDD:
+    def _levels(self, var_names: Optional[Sequence[str]] = None):
+        """Create BDD levels from ordered sequence of variable names."""
+        if var_names is None:
+            return None
+
+        levels: Dict[str, int] = {}
+        for name in var_names:
+            offset = len(levels)
+
+            var = self._inputs.get(name, self.output)
+            assert var.name == name, "Name doesn't match input or output."
+
+            size = var._encoding_size
+            levels.update(var.bundle.blast(range(offset, offset + size)))
+        return levels
+
+    def lift(self, bdd_or_aig, manager=None, order=None) -> MDD:
         """Wrap bdd or py-aiger object using this interface.
 
         Note: Output is assumed to be 1-hot encoded!
         """
+        lvls = self._levels(order)
         if hasattr(bdd_or_aig, "aig"):
-            bdd = to_bdd(bdd_or_aig)
-        bdd &= to_bdd(self.valid(), manager=bdd.bdd)
+            bdd = to_bdd(bdd_or_aig, manager=manager, levels=lvls)
+        bdd &= to_bdd(self.valid(), manager=bdd.bdd, levels=lvls)
 
         return DecisionDiagram(interface=self, bdd=bdd)
 
@@ -201,6 +224,11 @@ class Interface:
 class DecisionDiagram:
     interface: Interface
     bdd: BDD
+
+    @property
+    def io(self) -> Interface:
+        """Alias for interface property."""
+        return self.interface
 
     def __attrs_post_init__(self):
         """Check that bdd conforms to interface."""
@@ -222,7 +250,7 @@ class DecisionDiagram:
         """Return MDD where subset of inputs have been applied."""
         vals: Dict[str, bool] = {}
         for name, value in inputs.items():
-            var = self.interface.var(name)
+            var = self.io.var(name)
             encoded = var.encode(value)
             assert var.valid({var.name: encoded})[0]
 
@@ -234,8 +262,7 @@ class DecisionDiagram:
         bdd = self.bdd.let(**vals)
         assert bdd.bdd.false != bdd, "Inputs violated self.interface.valid."
 
-        io = self.interface
-        io2 = attr.evolve(io, applied=io.applied | set(inputs))
+        io2 = attr.evolve(self.io, applied=self.io.applied | set(inputs))
         return attr.evolve(self, bdd=bdd, interface=io2)
 
     def __call__(self, inputs: Dict[str, Any]) -> Any:
@@ -246,7 +273,7 @@ class DecisionDiagram:
         # Return which decision this was.
         name, idx = name_index(bdd.var)
 
-        output_var = self.interface.output
+        output_var = self.io.output
         assert name == output_var.name
         assert 0 <= idx < output_var._encoding_size
         return output_var.decode(1 << idx)
@@ -260,20 +287,10 @@ class DecisionDiagram:
         As a side effect, this function turns off reordering.
         """
         if var_names is None:
-            var_names = [var.name for var in self.interface.inputs]
-            var_names.append(self.interface.output.name)
+            var_names = [var.name for var in self.io.inputs]
+            var_names.append(self.io.output.name)
 
-        io = self.interface
-        levels: Dict[str, int] = {}
-        for name in var_names:
-            offset = len(levels)
-
-            var = io._inputs.get(name, io.output)
-            assert var.name == name, "Name doesn't match input or output."
-
-            size = var._encoding_size
-            levels.update(var.bundle.blast(range(offset, offset + size)))
-
+        levels = self.io._levels(var_names)
         assert len(levels) == len(self.bdd.bdd.vars)
         self.bdd.bdd.reorder(levels)
         self.bdd.bdd.configure(reordering=False)
@@ -288,7 +305,7 @@ class DecisionDiagram:
         """
         manager = self.bdd.bdd
         if not isinstance(value, DecisionDiagram):
-            value = self.interface.constantly(value, manager=manager).bdd
+            value = self.io.constantly(value, manager=manager).bdd
 
         if hasattr(test, "aig"):
             test = to_bdd(test, manager=manager)
