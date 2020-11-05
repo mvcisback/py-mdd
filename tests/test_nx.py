@@ -31,3 +31,6 @@ def test_to_nx():
         frozenset({1}),
         frozenset({2, 3, 4, 5}),
     }
+
+    graph3 = to_nx(func, reindex=False)
+    assert len(graph3) == len(graph2)

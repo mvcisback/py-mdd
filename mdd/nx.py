@@ -17,7 +17,8 @@ from mdd.mdd import name_index, to_bdd
 
 def to_nx(func: DecisionDiagram,
           symbolic_edges: bool = True,
-          order: Optional[Sequence[str]] = None) -> DiGraph:
+          order: Optional[Sequence[str]] = None,
+          reindex: bool = True) -> DiGraph:
     """Returns networkx graph representation of `func` DecisionDiagram.
 
     Nodes represent decision variables given in order. The variable is
@@ -63,8 +64,8 @@ def to_nx(func: DecisionDiagram,
             stack.append(child)
             graph.add_edge(curr, child, label=guard)
 
-    # Decouple from BDD.
-    graph = nx.convert_node_labels_to_integers(graph)
+    if reindex:  # Decouple from BDD.
+        graph = nx.convert_node_labels_to_integers(graph)
     return graph if symbolic_edges else concrete_graph(func, graph)
 
 
