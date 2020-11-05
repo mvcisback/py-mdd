@@ -174,7 +174,9 @@ class Interface:
         valid_tests = (var.valid for var in self.inputs)
         if self._valid is not None:
             valid_tests = itertools.chain([self._valid], valid_tests)
-        return reduce(lambda x, y: x & y, valid_tests)
+        expr = reduce(lambda x, y: x & y, valid_tests)
+        sink = BV.sink(self.output._encoding_size, [self.output.name])
+        return BV.UnsignedBVExpr(expr.aigbv | sink)  # Adds don't care inputs.
 
     def constantly(self, output: Any, manager: Optional[BDD] = None) -> MDD:
         """Return MDD returns `output` for any input."""
