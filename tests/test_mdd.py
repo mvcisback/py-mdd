@@ -1,5 +1,7 @@
 import aiger_bv as BV
 
+import dd
+
 import mdd
 
 
@@ -84,7 +86,9 @@ def test_order():
     func = interface.constantly(-1)
     func.order(['y', 'x', 'z', interface.output.name])
 
-    assert func.bdd.bdd.vars == {
+    bdd = func.bdd.bdd
+    lvls = bdd.vars if isinstance(bdd, dd.autoref.BDD) else bdd.var_levels
+    assert lvls == {
         "y[0]": 0,
         "y[1]": 1,
         "x[0]": 2,
