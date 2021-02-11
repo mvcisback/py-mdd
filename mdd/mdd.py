@@ -14,7 +14,11 @@ import attr
 from aiger_bv.bundle import Bundle
 from aiger_bv.expr import UnsignedBVExpr
 from attr._make import Attribute
-from dd.autoref import BDD
+
+try:
+    from dd.cudd import BDD
+except ImportError:
+    from dd.autoref import BDD
 
 
 Assignment = Tuple[Dict[str, Any], Any]
