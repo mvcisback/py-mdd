@@ -216,10 +216,10 @@ class Interface:
         """
         lvls = self._levels(order)
         if hasattr(bdd_or_aig, "aig"):
-            bdd = to_bdd(bdd_or_aig, manager=manager, levels=lvls)
-        bdd &= to_bdd(self.valid(), manager=bdd.bdd, levels=lvls)
+            bdd_or_aig = to_bdd(bdd_or_aig, manager=manager, levels=lvls)
+        bdd_or_aig &= to_bdd(self.valid(), manager=bdd_or_aig.bdd, levels=lvls)
 
-        return DecisionDiagram(interface=self, bdd=bdd)
+        return DecisionDiagram(interface=self, bdd=bdd_or_aig)
 
     def var(self, name: str) -> Variable:
         """Get `Variable` for `name` in this interface."""
