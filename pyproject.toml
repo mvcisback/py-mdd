@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "mdd"
-version = "0.3.6"
+version = "0.3.7"
 description = "Python abstraction around Binary Decision Diagrams to implement Multivalued Decision Diagrams."
 authors = ["Marcell Vazquez-Chanlatte <mvc@linux.com>"]
 repository = "https://github.com/mvcisback/py-mdd"
