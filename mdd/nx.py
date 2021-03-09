@@ -35,7 +35,7 @@ def to_nx(func: DecisionDiagram,
     func.order(order)
 
     # Use bit-dfa to hide some of dd's internal details.
-    start = bdd2dfa.to_dfa(func.bdd, qdd=False).start
+    start = bdd2dfa.to_dfa(func.bdd, qdd=False, lazy=True).start
 
     # DFS construction of graph.
     graph = nx.DiGraph()
